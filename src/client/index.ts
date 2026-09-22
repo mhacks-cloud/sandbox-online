@@ -15,8 +15,13 @@ import {
   HOTBAR_SIZE,
   PROFESSION_IDS,
   PROFESSION_NAMES,
+  PROFESSION_UNLOCKS,
   LOCATIONS,
   RARITIES,
+  TOOL_TIERS,
+  RESOURCE_TYPES,
+  FISHING_SPOTS,
+  CROPS,
   ITEM_CATALOG,
   WORKBENCH_RECIPES,
   FURNACE_RECIPES,
@@ -180,6 +185,14 @@ document.body.insertAdjacentHTML(
       <button data-buy="carrot_seed">
         🌱 Semente de Cenoura · 3 ouro
       </button>
+
+      <button data-buy="tomato_seed">
+        🍅 Semente de Tomate · 6 ouro · Agricultor Nv.5
+      </button>
+
+      <button data-buy="pumpkin_seed">
+        🎃 Semente de Abóbora · 10 ouro · Agricultor Nv.10
+      </button>
     </div>
 
     <div class="modal-section">
@@ -193,6 +206,13 @@ document.body.insertAdjacentHTML(
       <button data-sell="carrot">🥕 Cenoura</button>
       <button data-sell="river_fish">🐟 Peixe</button>
       <button data-sell="bass">🐠 Robalo</button>
+      <button data-sell="trout">🐟 Truta</button>
+      <button data-sell="golden_carp">🐟 Carpa Dourada</button>
+      <button data-sell="copper_ore">🟠 Minério de Cobre</button>
+      <button data-sell="silver_ore">⚪ Minério de Prata</button>
+      <button data-sell="hardwood">🪵 Madeira Nobre</button>
+      <button data-sell="tomato">🍅 Tomate</button>
+      <button data-sell="pumpkin">🎃 Abóbora</button>
       <button data-sell="all">🪙 Vender tudo negociável</button>
     </div>
   </div>
@@ -1174,6 +1194,111 @@ function professionXpNeeded(
 }
 
 
+
+function clientProfessionLevel(
+  profession,
+) {
+
+  return Math.max(
+    1,
+
+    Number(
+      professions()?.[
+        profession
+      ]?.level,
+    )
+    ||
+    1,
+  );
+}
+
+
+function clientToolTier(
+  itemId,
+  kind,
+) {
+
+  const tool =
+    TOOL_TIERS[
+      itemId
+    ];
+
+
+  if (
+    !tool
+    ||
+    tool.kind !==
+    kind
+  ) {
+
+    return 0;
+  }
+
+
+  return Number(
+    tool.tier,
+  )
+  ||
+  0;
+}
+
+
+function nearestFishingSpot(
+  x,
+  z,
+  radius =
+    4.5,
+) {
+
+  let result =
+    null;
+
+
+  for (
+    const [
+      id,
+      spot,
+    ]
+    of Object.entries(
+      FISHING_SPOTS,
+    )
+  ) {
+
+    const distance =
+      Math.hypot(
+        spot.x -
+        x,
+
+        spot.z -
+        z,
+      );
+
+
+    if (
+      distance <=
+      radius
+      &&
+      (
+        !result
+        ||
+        distance <
+        result.distance
+      )
+    ) {
+
+      result = {
+        id,
+        spot,
+        distance,
+      };
+    }
+  }
+
+
+  return result;
+}
+
+
 /*
  * PIXEL HELPERS
  */
@@ -1313,6 +1438,7 @@ function shadow(
 }
 
 
+
 function simpleTexture(
   kind,
 ) {
@@ -1327,15 +1453,35 @@ function simpleTexture(
       if (
         kind ===
         "tree"
+        ||
+        kind ===
+        "hard_tree"
       ) {
 
-        ctx.fillStyle = "#654029";
+        ctx.fillStyle =
+          kind ===
+          "hard_tree"
+            ? "#523526"
+            : "#654029";
+
         ctx.fillRect(21,35,7,27);
 
-        ctx.fillStyle = "#285d3d";
+
+        ctx.fillStyle =
+          kind ===
+          "hard_tree"
+            ? "#214b35"
+            : "#285d3d";
+
         ctx.fillRect(9,15,30,30);
 
-        ctx.fillStyle = "#36784a";
+
+        ctx.fillStyle =
+          kind ===
+          "hard_tree"
+            ? "#2b6340"
+            : "#36784a";
+
         ctx.fillRect(14,8,20,19);
       }
 
@@ -1346,32 +1492,76 @@ function simpleTexture(
         ||
         kind ===
         "ore"
+        ||
+        kind ===
+        "copper_ore"
+        ||
+        kind ===
+        "silver_ore"
       ) {
 
         ctx.fillStyle = "#515c5c";
         ctx.fillRect(8,34,32,16);
         ctx.fillRect(13,27,24,23);
 
-        ctx.fillStyle =
+
+        let vein =
+          "#7a8585";
+
+
+        if (
           kind ===
           "ore"
-            ? "#b27d51"
-            : "#7a8585";
+        ) vein =
+          "#9e7b58";
 
-        ctx.fillRect(19,30,10,7);
+
+        if (
+          kind ===
+          "copper_ore"
+        ) vein =
+          "#c46e36";
+
+
+        if (
+          kind ===
+          "silver_ore"
+        ) vein =
+          "#d5dde0";
+
+
+        ctx.fillStyle =
+          vein;
+
+        ctx.fillRect(18,30,11,7);
+        ctx.fillRect(29,40,6,5);
       }
 
 
       else if (
         kind ===
         "bush"
+        ||
+        kind ===
+        "herb_bush"
       ) {
 
-        ctx.fillStyle = "#306444";
+        ctx.fillStyle =
+          kind ===
+          "herb_bush"
+            ? "#376f43"
+            : "#306444";
+
         ctx.fillRect(7,32,34,20);
         ctx.fillRect(12,25,25,27);
 
-        ctx.fillStyle = "#795299";
+
+        ctx.fillStyle =
+          kind ===
+          "herb_bush"
+            ? "#ddd06b"
+            : "#795299";
+
         ctx.fillRect(18,37,3,3);
         ctx.fillRect(30,40,3,3);
       }
@@ -1425,6 +1615,7 @@ function simpleTexture(
         ctx.fillStyle = "#d7a17a";
         ctx.fillRect(19,12,16,15);
 
+
         const colors = {
           merchant: "#684b8e",
           lina: "#3d7890",
@@ -1435,12 +1626,14 @@ function simpleTexture(
           cook: "#a46751",
         };
 
+
         ctx.fillStyle =
           colors[
             kind
           ]
           ||
           "#6f6f6f";
+
 
         ctx.fillRect(14,28,27,27);
 
@@ -1450,7 +1643,6 @@ function simpleTexture(
     },
   );
 }
-
 
 function stationTexture(
   kind,
@@ -1825,6 +2017,117 @@ function addSpriteObject(
 }
 
 
+
+function addFishingLakeVisual(
+  spot,
+  color,
+) {
+
+  const shore =
+    new THREE.Mesh(
+
+      new THREE.CircleGeometry(
+        4.7,
+        24,
+      ),
+
+      new THREE.MeshBasicMaterial(
+        {
+          color:
+            0xb8a36f,
+        },
+      ),
+    );
+
+
+  shore.scale.set(
+    1.2,
+    .8,
+    1,
+  );
+
+
+  shore.rotation.x =
+    -Math.PI /
+    2;
+
+
+  shore.position.set(
+    spot.x,
+    .02,
+    spot.z,
+  );
+
+
+  scene.add(
+    shore,
+  );
+
+
+  const water =
+    new THREE.Mesh(
+
+      new THREE.CircleGeometry(
+        4.2,
+        24,
+      ),
+
+      new THREE.MeshBasicMaterial(
+        {
+          color,
+        },
+      ),
+    );
+
+
+  water.scale.set(
+    1.2,
+    .8,
+    1,
+  );
+
+
+  water.rotation.x =
+    -Math.PI /
+    2;
+
+
+  water.position.set(
+    spot.x,
+    .03,
+    spot.z,
+  );
+
+
+  scene.add(
+    water,
+  );
+
+
+  addLabel(
+    `${spot.label} · Pescador Nv.${spot.reqLevel}`,
+    spot.x,
+    spot.z,
+    .6,
+  );
+}
+
+
+function addAdvancedFishingSpots() {
+
+  addFishingLakeVisual(
+    FISHING_SPOTS.deep_lake,
+    0x3f839b,
+  );
+
+
+  addFishingLakeVisual(
+    FISHING_SPOTS.silver_lake,
+    0x648ca5,
+  );
+}
+
+
 function buildWorld() {
 
   const grass =
@@ -2163,6 +2466,8 @@ function buildWorld() {
 
 buildWorld();
 
+addAdvancedFishingSpots();
+
 
 class PlayerVisual {
 
@@ -2274,6 +2579,7 @@ class PlayerVisual {
 }
 
 
+
 class ResourceVisual {
 
   constructor(
@@ -2284,12 +2590,26 @@ class ResourceVisual {
       new THREE.Group();
 
 
-    const size =
+    const treeLike =
       node.kind ===
       "tree"
+      ||
+      node.kind ===
+      "hard_tree";
+
+
+    const size =
+      treeLike
         ? [
-            3.4,
-            4.8,
+            node.kind ===
+            "hard_tree"
+              ? 3.8
+              : 3.4,
+
+            node.kind ===
+            "hard_tree"
+              ? 5.2
+              : 4.8,
           ]
         : [
             2,
@@ -2361,11 +2681,11 @@ class ResourceVisual {
         this.sprite.position.x =
           0;
       },
+
       100,
     );
   }
 }
-
 
 class EnemyVisual {
 
@@ -2553,6 +2873,7 @@ class DropVisual {
 }
 
 
+
 class FarmVisual {
 
   constructor(
@@ -2682,25 +3003,23 @@ class FarmVisual {
     }
 
 
-    if (
-      plot.crop ===
-      "carrot"
-    ) {
+    const colors = {
+      wheat: 0xc0a342,
+      carrot: 0x4c8a42,
+      tomato: 0xb63d38,
+      pumpkin: 0xd78332,
+    };
 
-      this.crop.material.color.set(
-        0x4c8a42,
-      );
-    }
 
-    else {
-
-      this.crop.material.color.set(
-        0xc0a342,
-      );
-    }
+    this.crop.material.color.set(
+      colors[
+        plot.crop
+      ]
+      ||
+      0x6d943d,
+    );
   }
 }
-
 
 let room;
 
@@ -3824,6 +4143,7 @@ function renderQuestPanel(
 }
 
 
+
 function renderProfessions() {
 
   professionList.innerHTML =
@@ -3876,6 +4196,44 @@ function renderProfessions() {
       "profession-card";
 
 
+    const unlocks =
+      PROFESSION_UNLOCKS[
+        id
+      ]
+      ||
+      [];
+
+
+    const unlockHtml =
+      unlocks
+        .map(
+          (
+            unlock,
+          ) => {
+
+            const unlocked =
+              profession.level >=
+              unlock.level;
+
+
+            return `
+              <div class="profession-info">
+                ${
+                  unlocked
+                    ? "✅"
+                    : "🔒"
+                }
+                Nv.${unlock.level}
+                · ${unlock.text}
+              </div>
+            `;
+          },
+        )
+        .join(
+          "",
+        );
+
+
     card.innerHTML =
       `
       <h3>
@@ -3902,6 +4260,10 @@ function renderProfessions() {
           needed
         } XP
       </div>
+
+      <div style="margin-top:8px">
+        ${unlockHtml}
+      </div>
       `;
 
 
@@ -3910,7 +4272,6 @@ function renderProfessions() {
     );
   }
 }
-
 
 function updateHud() {
 
@@ -4056,6 +4417,7 @@ function openModal(
 }
 
 
+
 function renderCrafting(
   station,
 ) {
@@ -4123,11 +4485,41 @@ function renderCrafting(
               ITEM_CATALOG[
                 item
               ]?.label
+              ||
+              item
             }`,
         )
         .join(
           " + ",
         );
+
+
+    const reqProfession =
+      recipe.reqProfession
+      ||
+      (
+        station ===
+        "kitchen"
+          ? "cooking"
+          : "production"
+      );
+
+
+    const reqLevel =
+      recipe.reqLevel
+      ||
+      1;
+
+
+    const currentLevel =
+      clientProfessionLevel(
+        reqProfession,
+      );
+
+
+    const locked =
+      currentLevel <
+      reqLevel;
 
 
     const button =
@@ -4140,19 +4532,38 @@ function renderCrafting(
       "craft-button";
 
 
+    button.disabled =
+      locked;
+
+
     button.innerHTML =
-      `${
-        recipe.label
-      }<br><small>${
-        costs
-      }</small>`;
+      `
+      ${
+        locked
+          ? "🔒 "
+          : ""
+      }
+      ${recipe.label}
+      <br>
+      <small>${costs}</small>
+      ${
+        locked
+          ? `<br><small>Requer ${
+              PROFESSION_NAMES[
+                reqProfession
+              ]
+              ||
+              reqProfession
+            } Nv.${reqLevel}</small>`
+          : ""
+      }
+      `;
 
 
     button.onclick =
       () =>
         room?.send(
           "craft",
-
           {
             station,
             recipe: id,
@@ -4165,7 +4576,6 @@ function renderCrafting(
     );
   }
 }
-
 
 document
   .querySelectorAll(
@@ -5517,6 +5927,7 @@ function nearest(
 }
 
 
+
 function updateInteraction() {
 
   interaction.style.display =
@@ -5592,8 +6003,39 @@ function updateInteraction() {
       !plot.state.crop
     ) {
 
-      interaction.textContent =
-        "[ E ] Plantar semente selecionada";
+      const selected =
+        hotbar()[
+          selectedHotbar
+        ];
+
+
+      const crop =
+        CROPS[
+          selected
+        ];
+
+
+      if (
+        crop
+        &&
+        clientProfessionLevel(
+          "farming",
+        )
+        <
+        crop.reqLevel
+      ) {
+
+        interaction.textContent =
+          `Agricultor Nv.${
+            crop.reqLevel
+          } necessário`;
+      }
+
+      else {
+
+        interaction.textContent =
+          "[ E ] Plantar semente selecionada";
+      }
     }
 
     else {
@@ -5610,22 +6052,65 @@ function updateInteraction() {
   }
 
 
+  const fishing =
+    nearestFishingSpot(
+      localPlayer.x,
+      localPlayer.z,
+    );
+
+
   if (
-    distanceTo(
-      localPlayer,
-      LOCATIONS.fishing,
-    )
-    <=
-    4
+    fishing
   ) {
 
-    interaction.textContent =
+    const selected =
       hotbar()[
         selectedHotbar
-      ] ===
-      "fishing_rod"
-        ? "[ E ] 🎣 Pescar"
-        : "Selecione a Vara de Pesca";
+      ];
+
+
+    const level =
+      clientProfessionLevel(
+        "fishing",
+      );
+
+
+    const rodTier =
+      clientToolTier(
+        selected,
+        "rod",
+      );
+
+
+    if (
+      level <
+      fishing.spot.reqLevel
+    ) {
+
+      interaction.textContent =
+        `Pescador Nv.${
+          fishing.spot.reqLevel
+        } necessário`;
+    }
+
+    else if (
+      rodTier <
+      fishing.spot.minRodTier
+    ) {
+
+      interaction.textContent =
+        `Vara T${
+          fishing.spot.minRodTier
+        } necessária`;
+    }
+
+    else {
+
+      interaction.textContent =
+        `[ E ] 🎣 Pescar · ${
+          fishing.spot.label
+        }`;
+    }
 
 
     interaction.style.display =
@@ -5806,50 +6291,98 @@ function updateInteraction() {
   ) return;
 
 
+  const config =
+    RESOURCE_TYPES[
+      node.state.kind
+    ];
+
+
   if (
-    node.state.kind ===
-    "tree"
+    !config
+  ) return;
+
+
+  const level =
+    clientProfessionLevel(
+      config.profession,
+    );
+
+
+  if (
+    level <
+    config.reqLevel
   ) {
 
     interaction.textContent =
-      hotbar()[
-        selectedHotbar
-      ] ===
-      "axe"
-        ? "[ E ] Cortar árvore"
-        : "Equipe o Machado";
+      `${
+        PROFESSION_NAMES[
+          config.profession
+        ]
+        ||
+        config.profession
+      } Nv.${
+        config.reqLevel
+      } necessário`;
+
+
+    interaction.style.display =
+      "block";
+
+    return;
   }
 
 
-  else if (
-    node.state.kind ===
-    "rock"
-    ||
-    node.state.kind ===
-    "ore"
+  if (
+    config.tool
   ) {
 
-    interaction.textContent =
+    const selected =
       hotbar()[
         selectedHotbar
-      ] ===
-      "pickaxe"
-        ? "[ E ] Minerar"
-        : "Equipe a Picareta";
-  }
+      ];
 
+
+    const tier =
+      clientToolTier(
+        selected,
+        config.tool,
+      );
+
+
+    if (
+      tier <
+      config.minTier
+    ) {
+
+      interaction.textContent =
+        `${
+          config.label
+        } · ferramenta T${
+          config.minTier
+        } necessária`;
+    }
+
+    else {
+
+      interaction.textContent =
+        `[ E ] ${
+          config.label
+        }`;
+    }
+  }
 
   else {
 
     interaction.textContent =
-      "[ E ] Coletar arbusto";
+      `[ E ] Coletar ${
+        config.label
+      }`;
   }
 
 
   interaction.style.display =
     "block";
 }
-
 
 const projection =
   new THREE.Vector3();

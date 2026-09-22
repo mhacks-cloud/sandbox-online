@@ -18,7 +18,8 @@
     "validate": "npx tsc --noEmit && npm run build",
     "save:report": "node scripts/save-report.mjs",
     "backup": "bash scripts/project-backup.sh",
-    "git:sync": "bash scripts/git-sync.sh"
+    "git:sync": "bash scripts/git-sync.sh",
+    "progression:report": "node scripts/progression-report.mjs"
   },
   "author": "",
   "license": "UNLICENSED",

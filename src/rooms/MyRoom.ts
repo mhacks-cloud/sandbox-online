@@ -32,6 +32,9 @@ import {
   PROFESSION_IDS,
   LOCATIONS,
   RARITIES,
+  TOOL_TIERS,
+  RESOURCE_TYPES,
+  FISHING_SPOTS,
   ITEM_CATALOG,
   WORKBENCH_RECIPES,
   FURNACE_RECIPES,
@@ -1285,7 +1288,7 @@ export class MyRoom
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 8:",
+      "🌎 Sandbox Online Etapa 9:",
       this.roomId,
     );
 
@@ -1321,6 +1324,7 @@ export class MyRoom
   }
 
 
+
   createResources() {
 
     for (
@@ -1333,26 +1337,24 @@ export class MyRoom
       of RESOURCE_LAYOUT
     ) {
 
-      let hp =
-        1;
+      const config =
+        RESOURCE_TYPES[
+          kind
+        ];
 
 
       if (
-        kind ===
-        "tree"
-      ) hp = 3;
+        !config
+      ) {
+
+        console.warn(
+          "Recurso desconhecido:",
+          kind,
+        );
 
 
-      if (
-        kind ===
-        "rock"
-      ) hp = 4;
-
-
-      if (
-        kind ===
-        "ore"
-      ) hp = 5;
+        continue;
+      }
 
 
       this.state.nodes.set(
@@ -1363,16 +1365,23 @@ export class MyRoom
             kind,
             x,
             z,
-            hp,
-            maxHp: hp,
-            active: true,
-            respawnAt: 0,
+
+            hp:
+              config.hp,
+
+            maxHp:
+              config.hp,
+
+            active:
+              true,
+
+            respawnAt:
+              0,
           },
         ),
       );
     }
   }
-
 
   createEnemies() {
 
@@ -3440,6 +3449,123 @@ export class MyRoom
   }
 
 
+
+  professionLevel(
+    player,
+    profession,
+  ) {
+
+    const professions =
+      this.getProfessions(
+        player,
+      );
+
+
+    return Math.max(
+      1,
+
+      Number(
+        professions?.[
+          profession
+        ]?.level,
+      )
+      ||
+      1,
+    );
+  }
+
+
+  toolTier(
+    itemId,
+    kind,
+  ) {
+
+    const tool =
+      TOOL_TIERS[
+        itemId
+      ];
+
+
+    if (
+      !tool
+      ||
+      tool.kind !==
+      kind
+    ) {
+
+      return 0;
+    }
+
+
+    return Math.max(
+      0,
+
+      Number(
+        tool.tier,
+      )
+      ||
+      0,
+    );
+  }
+
+
+  findFishingSpot(
+    x,
+    z,
+    radius =
+      4.5,
+  ) {
+
+    let result =
+      null;
+
+
+    for (
+      const [
+        id,
+        spot,
+      ]
+      of Object.entries(
+        FISHING_SPOTS,
+      )
+    ) {
+
+      const distance =
+        Math.hypot(
+          spot.x -
+          x,
+
+          spot.z -
+          z,
+        );
+
+
+      if (
+        distance <=
+        radius
+        &&
+        (
+          !result
+          ||
+          distance <
+          result.distance
+        )
+      ) {
+
+        result = {
+          id,
+          spot,
+          distance,
+        };
+      }
+    }
+
+
+    return result;
+  }
+
+
+
   interact(
     client,
     payload,
@@ -3500,11 +3626,8 @@ export class MyRoom
       const remaining =
         addItem(
           inventory,
-
           drop.item.kind,
-
           original,
-
           drop.item.rarity,
         );
 
@@ -3521,7 +3644,6 @@ export class MyRoom
 
         client.send(
           "toast",
-
           {
             text:
               "Inventário cheio.",
@@ -3607,19 +3729,22 @@ export class MyRoom
      * PESCA
      */
 
+    const fishing =
+      this.findFishingSpot(
+        player.x,
+        player.z,
+      );
+
+
     if (
-      this.distance(
-        player,
-        LOCATIONS.fishing,
-      )
-      <=
-      4
+      fishing
     ) {
 
       this.fish(
         client,
         player,
         selected,
+        fishing,
       );
 
 
@@ -3628,7 +3753,7 @@ export class MyRoom
 
 
     /*
-     * NPCS DE QUEST
+     * NPCS
      */
 
     const questNpcs = [
@@ -3659,7 +3784,6 @@ export class MyRoom
 
         client.send(
           "open-quests",
-
           {
             npc,
           },
@@ -3713,36 +3837,14 @@ export class MyRoom
     }
 
 
-    const stations = [
-
-      [
-        "workbench",
-        WORKBENCH_RECIPES,
-      ],
-
-      [
-        "furnace",
-        FURNACE_RECIPES,
-      ],
-
-      [
-        "mill",
-        MILL_RECIPES,
-      ],
-
-      [
-        "kitchen",
-        KITCHEN_RECIPES,
-      ],
-
-    ];
-
-
     for (
-      const [
-        station,
+      const station
+      of [
+        "workbench",
+        "furnace",
+        "mill",
+        "kitchen",
       ]
-      of stations
     ) {
 
       if (
@@ -3758,7 +3860,6 @@ export class MyRoom
 
         client.send(
           "open-crafting",
-
           {
             station,
           },
@@ -3788,7 +3889,6 @@ export class MyRoom
 
       client.send(
         "toast",
-
         {
           text:
             "Nada para interagir por perto.",
@@ -3800,20 +3900,41 @@ export class MyRoom
     }
 
 
+    const config =
+      RESOURCE_TYPES[
+        resource.node.kind
+      ];
+
+
     if (
-      resource.node.kind ===
-      "tree"
-      &&
-      selected !==
-      "axe"
+      !config
+    ) {
+
+      return;
+    }
+
+
+    const professionLevel =
+      this.professionLevel(
+        player,
+        config.profession,
+      );
+
+
+    if (
+      professionLevel <
+      config.reqLevel
     ) {
 
       client.send(
         "toast",
-
         {
           text:
-            "Equipe o machado.",
+            `Requer ${
+              config.profession
+            } Nv.${
+              config.reqLevel
+            }.`,
         },
       );
 
@@ -3822,30 +3943,39 @@ export class MyRoom
     }
 
 
+    let toolTier =
+      1;
+
+
     if (
-      (
-        resource.node.kind ===
-        "rock"
-        ||
-        resource.node.kind ===
-        "ore"
-      )
-      &&
-      selected !==
-      "pickaxe"
+      config.tool
     ) {
 
-      client.send(
-        "toast",
-
-        {
-          text:
-            "Equipe a picareta.",
-        },
-      );
+      toolTier =
+        this.toolTier(
+          selected,
+          config.tool,
+        );
 
 
-      return;
+      if (
+        toolTier <
+        config.minTier
+      ) {
+
+        client.send(
+          "toast",
+          {
+            text:
+              `Ferramenta insuficiente para ${
+                config.label
+              }.`,
+          },
+        );
+
+
+        return;
+      }
     }
 
 
@@ -3854,13 +3984,15 @@ export class MyRoom
         0,
 
         resource.node.hp -
-        1,
+        Math.max(
+          1,
+          toolTier,
+        ),
       );
 
 
     this.broadcast(
       "resource-hit",
-
       {
         id:
           resource.id,
@@ -3888,6 +4020,17 @@ export class MyRoom
     node,
   ) {
 
+    const config =
+      RESOURCE_TYPES[
+        node.kind
+      ];
+
+
+    if (
+      !config
+    ) return;
+
+
     node.active =
       false;
 
@@ -3895,121 +4038,72 @@ export class MyRoom
     node.respawnAt =
       Date.now()
       +
+      config.respawn;
+
+
+    const professionLevel =
+      this.professionLevel(
+        player,
+        config.profession,
+      );
+
+
+    config.drops.forEach(
       (
-        node.kind ===
-        "ore"
-          ? 20000
-          : node.kind ===
-            "rock"
-            ? 15000
-            : node.kind ===
-              "bush"
-              ? 10000
-              : 12000
-      );
+        drop,
+        index,
+      ) => {
+
+        const [
+          itemId,
+          baseAmount,
+        ] =
+          drop;
 
 
-    if (
-      node.kind ===
-      "tree"
-    ) {
-
-      this.spawnDrop(
-        "wood",
-        3,
-        node.x,
-        node.z,
-      );
+        let amount =
+          baseAmount;
 
 
-      this.addProfessionXp(
-        player,
-        "woodcutting",
-        8,
-        client,
-      );
-    }
+        /*
+         * Bônus de maestria Nv.10.
+         */
+
+        if (
+          professionLevel >=
+          10
+          &&
+          index ===
+          0
+        ) {
+
+          amount +=
+            1;
+        }
 
 
-    if (
-      node.kind ===
-      "rock"
-    ) {
+        this.spawnDrop(
+          itemId,
+          amount,
 
-      this.spawnDrop(
-        "stone",
-        2,
-        node.x,
-        node.z,
-      );
+          node.x +
+          index *
+          .25,
 
-
-      this.addProfessionXp(
-        player,
-        "mining",
-        8,
-        client,
-      );
-    }
+          node.z +
+          index *
+          .1,
+        );
+      },
+    );
 
 
-    if (
-      node.kind ===
-      "ore"
-    ) {
-
-      this.spawnDrop(
-        "iron_ore",
-        2,
-        node.x,
-        node.z,
-      );
-
-
-      this.addProfessionXp(
-        player,
-        "mining",
-        12,
-        client,
-      );
-    }
-
-
-    if (
-      node.kind ===
-      "bush"
-    ) {
-
-      this.spawnDrop(
-        "fiber",
-        2,
-
-        node.x -
-        .2,
-
-        node.z,
-      );
-
-
-      this.spawnDrop(
-        "berry",
-        1,
-
-        node.x +
-        .25,
-
-        node.z +
-        .1,
-      );
-
-
-      this.addProfessionXp(
-        player,
-        "gathering",
-        8,
-        client,
-      );
-    }
+    this.addProfessionXp(
+      player,
+      config.profession,
+      config.xp,
+      client,
+    );
 
 
     this.persist(
@@ -4063,10 +4157,7 @@ export class MyRoom
 
       if (
         !seedEntry
-      ) {
-
-        return;
-      }
+      ) return;
 
 
       const [
@@ -4082,16 +4173,34 @@ export class MyRoom
         );
 
 
+      let yieldAmount =
+        data.yield;
+
+
+      if (
+        this.professionLevel(
+          player,
+          "farming",
+        )
+        >=
+        10
+      ) {
+
+        yieldAmount +=
+          1;
+      }
+
+
       const remaining =
         addItem(
           inventory,
           crop,
-          data.yield,
+          yieldAmount,
         );
 
 
       const collected =
-        data.yield -
+        yieldAmount -
         remaining;
 
 
@@ -4102,7 +4211,6 @@ export class MyRoom
 
         client.send(
           "toast",
-
           {
             text:
               "Inventário cheio.",
@@ -4167,13 +4275,21 @@ export class MyRoom
       );
 
 
-      this.saveWorld(
+      this.questEvent(
+        player,
         "harvest",
+        crop,
+        1,
+        client,
       );
 
 
+      /*
+       * SAVE IMEDIATO CORRETO DA COLHEITA
+       */
+
       this.saveWorld(
-        "plant",
+        "harvest",
       );
 
 
@@ -4185,7 +4301,6 @@ export class MyRoom
 
       client.send(
         "toast",
-
         {
           text:
             `Colhido: ${
@@ -4193,7 +4308,9 @@ export class MyRoom
             } ${
               ITEM_CATALOG[
                 crop
-              ].label
+              ]?.label
+              ||
+              crop
             }`,
         },
       );
@@ -4223,10 +4340,36 @@ export class MyRoom
 
         client.send(
           "toast",
-
           {
             text:
               "Selecione sementes na hotbar.",
+          },
+        );
+
+
+        return;
+      }
+
+
+      const level =
+        this.professionLevel(
+          player,
+          "farming",
+        );
+
+
+      if (
+        level <
+        cropData.reqLevel
+      ) {
+
+        client.send(
+          "toast",
+          {
+            text:
+              `Agricultor Nv.${
+                cropData.reqLevel
+              } necessário.`,
           },
         );
 
@@ -4288,6 +4431,15 @@ export class MyRoom
       );
 
 
+      /*
+       * SAVE IMEDIATO CORRETO DO PLANTIO
+       */
+
+      this.saveWorld(
+        "plant",
+      );
+
+
       this.persist(
         client.sessionId,
         true,
@@ -4296,13 +4448,14 @@ export class MyRoom
 
       client.send(
         "toast",
-
         {
           text:
             `Plantado: ${
               ITEM_CATALOG[
                 selected
-              ].label
+              ]?.label
+              ||
+              selected
             }`,
         },
       );
@@ -4314,7 +4467,6 @@ export class MyRoom
 
     client.send(
       "toast",
-
       {
         text:
           plot.stage ===
@@ -4330,19 +4482,66 @@ export class MyRoom
     client,
     player,
     selected,
+    fishing,
   ) {
 
+    const spot =
+      fishing?.spot;
+
+
     if (
-      selected !==
-      "fishing_rod"
+      !spot
+    ) return;
+
+
+    const fishingLevel =
+      this.professionLevel(
+        player,
+        "fishing",
+      );
+
+
+    if (
+      fishingLevel <
+      spot.reqLevel
     ) {
 
       client.send(
         "toast",
-
         {
           text:
-            "Selecione uma Vara de Pesca.",
+            `Pescador Nv.${
+              spot.reqLevel
+            } necessário para ${
+              spot.label
+            }.`,
+        },
+      );
+
+
+      return;
+    }
+
+
+    const rodTier =
+      this.toolTier(
+        selected,
+        "rod",
+      );
+
+
+    if (
+      rodTier <
+      spot.minRodTier
+    ) {
+
+      client.send(
+        "toast",
+        {
+          text:
+            `Vara de pesca T${
+              spot.minRodTier
+            } necessária.`,
         },
       );
 
@@ -4360,7 +4559,7 @@ export class MyRoom
     if (
       countItem(
         inventory,
-        "fishing_rod",
+        selected,
       )
       <=
       0
@@ -4391,7 +4590,6 @@ export class MyRoom
 
       client.send(
         "toast",
-
         {
           text:
             "Espere um pouco antes de lançar novamente.",
@@ -4409,54 +4607,102 @@ export class MyRoom
     );
 
 
-    const professions =
-      this.getProfessions(
-        player,
+    const loot =
+      spot.loot;
+
+
+    const totalWeight =
+      loot.reduce(
+        (
+          total,
+          entry,
+        ) =>
+          total +
+          entry[
+            1
+          ],
+        0,
       );
 
 
-    const level =
-      professions.fishing.level;
+    let roll =
+      Math.random()
+      *
+      totalWeight;
 
 
-    const rareChance =
-      Math.min(
-        .15 +
-        level *
-        .025,
-        .45,
-      );
+    let selectedFish =
+      loot[
+        0
+      ];
 
 
-    const fish =
+    for (
+      const entry
+      of loot
+    ) {
+
+      roll -=
+        entry[
+          1
+        ];
+
+
+      if (
+        roll <=
+        0
+      ) {
+
+        selectedFish =
+          entry;
+
+        break;
+      }
+    }
+
+
+    const [
+      fishId,
+      _weight,
+      fishXp,
+    ] =
+      selectedFish;
+
+
+    let amount =
+      1;
+
+
+    if (
+      fishingLevel >=
+      10
+      &&
       Math.random() <
-      rareChance
-        ? "bass"
-        : "river_fish";
+      .25
+    ) {
+
+      amount =
+        2;
+    }
 
 
     const remaining =
       addItem(
         inventory,
-        fish,
-        1,
+        fishId,
+        amount,
       );
+
+
+    const collected =
+      amount -
+      remaining;
 
 
     if (
-      remaining >
+      collected >
       0
     ) {
-
-      this.spawnDrop(
-        fish,
-        1,
-        player.x,
-        player.z,
-      );
-    }
-
-    else {
 
       this.setInventory(
         player,
@@ -4465,13 +4711,24 @@ export class MyRoom
     }
 
 
+    if (
+      remaining >
+      0
+    ) {
+
+      this.spawnDrop(
+        fishId,
+        remaining,
+        player.x,
+        player.z,
+      );
+    }
+
+
     this.addProfessionXp(
       player,
       "fishing",
-      fish ===
-      "bass"
-        ? 14
-        : 8,
+      fishXp,
       client,
     );
 
@@ -4480,7 +4737,16 @@ export class MyRoom
       player,
       "fish",
       "any_fish",
-      1,
+      collected,
+      client,
+    );
+
+
+    this.questEvent(
+      player,
+      "fish",
+      fishId,
+      collected,
       client,
     );
 
@@ -4493,18 +4759,22 @@ export class MyRoom
 
     client.send(
       "toast",
-
       {
         text:
-          `🎣 Você pescou ${
+          `🎣 ${
+            spot.label
+          }: ${
+            collected
+          }x ${
             ITEM_CATALOG[
-              fish
-            ].label
-          }!`,
+              fishId
+            ]?.label
+            ||
+            fishId
+          }`,
       },
     );
   }
-
 
   spawnDrop(
     kind,
@@ -4555,6 +4825,7 @@ export class MyRoom
       ),
     );
   }
+
 
 
   craft(
@@ -4640,6 +4911,58 @@ export class MyRoom
     ) return;
 
 
+    const reqProfession =
+      recipe.reqProfession
+      ||
+      (
+        station ===
+        "kitchen"
+          ? "cooking"
+          : "production"
+      );
+
+
+    const reqLevel =
+      Math.max(
+        1,
+
+        Number(
+          recipe.reqLevel,
+        )
+        ||
+        1,
+      );
+
+
+    const professionLevel =
+      this.professionLevel(
+        player,
+        reqProfession,
+      );
+
+
+    if (
+      professionLevel <
+      reqLevel
+    ) {
+
+      client.send(
+        "toast",
+        {
+          text:
+            `${
+              reqProfession
+            } Nv.${
+              reqLevel
+            } necessário.`,
+        },
+      );
+
+
+      return;
+    }
+
+
     const inventory =
       this.getInventory(
         player,
@@ -4667,7 +4990,6 @@ export class MyRoom
 
         client.send(
           "toast",
-
           {
             text:
               "Materiais insuficientes.",
@@ -4707,9 +5029,7 @@ export class MyRoom
     const remaining =
       addItem(
         simulated,
-
         recipe.result.id,
-
         recipe.result.qty,
       );
 
@@ -4721,7 +5041,6 @@ export class MyRoom
 
       client.send(
         "toast",
-
         {
           text:
             "Inventário cheio.",
@@ -4756,7 +5075,15 @@ export class MyRoom
       this.addProfessionXp(
         player,
         "cooking",
-        12,
+
+        reqLevel >=
+        10
+          ? 28
+          : reqLevel >=
+            5
+            ? 18
+            : 12,
+
         client,
       );
 
@@ -4775,10 +5102,18 @@ export class MyRoom
       this.addProfessionXp(
         player,
         "production",
-        station ===
-        "furnace"
-          ? 10
-          : 7,
+
+        reqLevel >=
+        10
+          ? 24
+          : reqLevel >=
+            5
+            ? 16
+            : station ===
+              "furnace"
+              ? 10
+              : 7,
+
         client,
       );
     }
@@ -4798,7 +5133,6 @@ export class MyRoom
 
     client.send(
       "toast",
-
       {
         text:
           `Fabricado: ${
@@ -4807,7 +5141,6 @@ export class MyRoom
       },
     );
   }
-
 
   equipItem(
     client,
@@ -5197,6 +5530,7 @@ export class MyRoom
   }
 
 
+
   buy(
     client,
     payload,
@@ -5239,10 +5573,59 @@ export class MyRoom
 
     if (
       !definition?.buy
-      ||
+    ) {
+
+      return;
+    }
+
+
+    if (
+      definition.buyReq
+    ) {
+
+      const currentLevel =
+        this.professionLevel(
+          player,
+          definition.buyReq.profession,
+        );
+
+
+      if (
+        currentLevel <
+        definition.buyReq.level
+      ) {
+
+        client.send(
+          "toast",
+          {
+            text:
+              `Requer ${
+                definition.buyReq.profession
+              } Nv.${
+                definition.buyReq.level
+              }.`,
+          },
+        );
+
+
+        return;
+      }
+    }
+
+
+    if (
       player.gold <
       definition.buy
     ) {
+
+      client.send(
+        "toast",
+        {
+          text:
+            "Ouro insuficiente.",
+        },
+      );
+
 
       return;
     }
@@ -5264,6 +5647,15 @@ export class MyRoom
       0
     ) {
 
+      client.send(
+        "toast",
+        {
+          text:
+            "Inventário cheio.",
+        },
+      );
+
+
       return;
     }
 
@@ -5283,7 +5675,6 @@ export class MyRoom
       true,
     );
   }
-
 
   inventoryMove(
     client,
@@ -6779,7 +7170,7 @@ export class MyRoom
     ] = {
 
       saveVersion:
-        8,
+        9,
 
       name:
         player.name,
