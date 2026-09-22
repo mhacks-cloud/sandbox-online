@@ -33,6 +33,8 @@ import {
   WORLD_BOUNDS,
   REGIONS,
   getRegionAt,
+  LANDMARK_ORDER,
+  LANDMARKS,
   LOCATIONS,
   RARITIES,
   TOOL_TIERS,
@@ -1117,6 +1119,17 @@ export class MyRoom
     new Map();
 
 
+  /*
+   * Etapa 11 v2:
+   *
+   * Pontos de interesse ficam fora do Schema Colyseus.
+   * Isso preserva completamente o fluxo de entrada do Player.
+   */
+
+  playerLandmarks =
+    new Map();
+
+
   dropCounter =
     0;
 
@@ -1289,13 +1302,22 @@ export class MyRoom
           payload,
         ),
 
+
+    "request-exploration-state":
+      (
+        client,
+      ) =>
+        this.sendExplorationState(
+          client,
+        ),
+
   };
 
 
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 10:",
+      "🌎 Sandbox Online Etapa 11 v2:",
       this.roomId,
     );
 
@@ -2431,6 +2453,12 @@ export class MyRoom
 
 
         this.updatePlayerRegion(
+          player,
+          sessionId,
+        );
+
+
+        this.updatePlayerLandmarks(
           player,
           sessionId,
         );
@@ -3730,6 +3758,298 @@ export class MyRoom
         region.label
       }`,
     );
+  }
+
+
+
+  sanitizeLandmarks(
+    values,
+  ) {
+
+    const result = [];
+
+
+    for (
+      const raw
+      of (
+        Array.isArray(
+          values,
+        )
+          ? values
+          : []
+      )
+    ) {
+
+      const id =
+        String(
+          raw
+          ||
+          "",
+        );
+
+
+      if (
+        LANDMARKS[
+          id
+        ]
+        &&
+        !result.includes(
+          id,
+        )
+      ) {
+
+        result.push(
+          id,
+        );
+      }
+    }
+
+
+    if (
+      !result.includes(
+        "village_waystone",
+      )
+    ) {
+
+      result.unshift(
+        "village_waystone",
+      );
+    }
+
+
+    return result;
+  }
+
+
+  getPlayerLandmarks(
+    sessionId,
+  ) {
+
+    const set =
+      this.playerLandmarks.get(
+        sessionId,
+      );
+
+
+    return this.sanitizeLandmarks(
+      set
+        ? Array.from(
+            set,
+          )
+        : [],
+    );
+  }
+
+
+  sendExplorationState(
+    client,
+  ) {
+
+    client.send(
+      "exploration-state",
+
+      {
+        landmarks:
+          this.getPlayerLandmarks(
+            client.sessionId,
+          ),
+      },
+    );
+  }
+
+
+  updatePlayerLandmarks(
+    player,
+    sessionId,
+  ) {
+
+    const set =
+      this.playerLandmarks.get(
+        sessionId,
+      );
+
+
+    if (
+      !set
+    ) {
+
+      return;
+    }
+
+
+    let changed =
+      false;
+
+
+    const client =
+      this.clients.find(
+        (
+          candidate,
+        ) =>
+          candidate.sessionId ===
+          sessionId,
+      );
+
+
+    for (
+      const id
+      of LANDMARK_ORDER
+    ) {
+
+      if (
+        set.has(
+          id,
+        )
+      ) {
+
+        continue;
+      }
+
+
+      const landmark =
+        LANDMARKS[
+          id
+        ];
+
+
+      if (
+        !landmark
+      ) {
+
+        continue;
+      }
+
+
+      const distance =
+        Math.hypot(
+          landmark.x -
+          player.x,
+
+          landmark.z -
+          player.z,
+        );
+
+
+      if (
+        distance >
+        (
+          landmark.radius
+          ||
+          3.2
+        )
+      ) {
+
+        continue;
+      }
+
+
+      set.add(
+        id,
+      );
+
+
+      changed =
+        true;
+
+
+      const xp =
+        Math.max(
+          0,
+
+          Number(
+            landmark.discoveryXp,
+          )
+          ||
+          0,
+        );
+
+
+      const gold =
+        Math.max(
+          0,
+
+          Number(
+            landmark.discoveryGold,
+          )
+          ||
+          0,
+        );
+
+
+      if (
+        xp >
+        0
+      ) {
+
+        this.addXp(
+          player,
+          xp,
+        );
+      }
+
+
+      if (
+        gold >
+        0
+      ) {
+
+        player.gold +=
+          gold;
+      }
+
+
+      this.questEvent(
+        player,
+        "landmark",
+        id,
+        1,
+        client,
+      );
+
+
+      client?.send(
+        "landmark-discovered",
+
+        {
+          id,
+
+          label:
+            landmark.label,
+
+          region:
+            landmark.region,
+
+          xp,
+
+          gold,
+
+          landmarks:
+            this.getPlayerLandmarks(
+              sessionId,
+            ),
+        },
+      );
+
+
+      console.log(
+        `📍 ${
+          player.name
+        } descobriu ${
+          landmark.label
+        }`,
+      );
+    }
+
+
+    if (
+      changed
+    ) {
+
+      this.persist(
+        sessionId,
+        true,
+      );
+    }
   }
 
 
@@ -6579,6 +6899,23 @@ export class MyRoom
             }
 
 
+            if (
+              objective.type ===
+              "landmark"
+            ) {
+
+              return this
+                .getPlayerLandmarks(
+                  client.sessionId,
+                )
+                .includes(
+                  objective.target,
+                )
+                  ? objective.amount
+                  : 0;
+            }
+
+
             return 0;
           },
         );
@@ -7404,6 +7741,23 @@ export class MyRoom
     );
 
 
+    /*
+     * A exploração é carregada DEPOIS que o Player normal
+     * já foi criado e registrado.
+     */
+
+    this.playerLandmarks.set(
+
+      client.sessionId,
+
+      new Set(
+        this.sanitizeLandmarks(
+          save.landmarks,
+        ),
+      ),
+    );
+
+
     this.recalculateStats(
       player,
     );
@@ -7468,6 +7822,11 @@ export class MyRoom
     );
 
 
+    this.playerLandmarks.delete(
+      client.sessionId,
+    );
+
+
     this.state.players.delete(
       client.sessionId,
     );
@@ -7504,7 +7863,7 @@ export class MyRoom
     ] = {
 
       saveVersion:
-        10,
+        11,
 
       name:
         player.name,
@@ -7560,6 +7919,11 @@ export class MyRoom
       discoveries:
         this.getDiscoveries(
           player,
+        ),
+
+      landmarks:
+        this.getPlayerLandmarks(
+          sessionId,
         ),
     };
 

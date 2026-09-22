@@ -20,7 +20,8 @@
     "backup": "bash scripts/project-backup.sh",
     "git:sync": "bash scripts/git-sync.sh",
     "progression:report": "node scripts/progression-report.mjs",
-    "regions:report": "node scripts/regions-report.mjs"
+    "regions:report": "node scripts/regions-report.mjs",
+    "exploration:report": "node scripts/exploration-report.mjs"
   },
   "author": "",
   "license": "UNLICENSED",

@@ -287,6 +287,383 @@ export function getRegionAt(
 }
 
 
+
+/*
+ * ETAPA 11 v2
+ *
+ * Pontos de Interesse.
+ *
+ * Esta versão não modifica o Schema do Player.
+ * Descobertas são persistidas no save do servidor.
+ */
+
+export const LANDMARK_ORDER = [
+
+  "village_waystone",
+
+  "sunmeadow_outpost",
+  "sunmeadow_ruins",
+
+  "forest_outpost",
+  "forest_watchtower",
+
+  "marsh_outpost",
+  "marsh_shrine",
+
+  "copper_outpost",
+  "copper_mine",
+
+  "silver_outpost",
+  "silver_shrine",
+
+];
+
+
+export const LANDMARKS = {
+
+  village_waystone: {
+
+    label:
+      "Pedra do Caminho",
+
+    description:
+      "Marco antigo no coração da Vila do Vale.",
+
+    region:
+      "village",
+
+    type:
+      "waystone",
+
+    x:
+      0,
+
+    z:
+      2,
+
+    radius:
+      3.2,
+
+    discoveryXp:
+      0,
+
+    discoveryGold:
+      0,
+  },
+
+
+  sunmeadow_outpost: {
+
+    label:
+      "Posto do Prado",
+
+    description:
+      "Um pequeno acampamento de viajantes no Prado do Sul.",
+
+    region:
+      "sunmeadow",
+
+    type:
+      "outpost",
+
+    x:
+      3,
+
+    z:
+      -30,
+
+    radius:
+      3.5,
+
+    discoveryXp:
+      15,
+
+    discoveryGold:
+      4,
+  },
+
+
+  sunmeadow_ruins: {
+
+    label:
+      "Ruínas do Prado",
+
+    description:
+      "Restos de uma construção antiga perdida entre os campos.",
+
+    region:
+      "sunmeadow",
+
+    type:
+      "ruins",
+
+    x:
+      -11,
+
+    z:
+      -44,
+
+    radius:
+      3.5,
+
+    discoveryXp:
+      25,
+
+    discoveryGold:
+      7,
+  },
+
+
+  forest_outpost: {
+
+    label:
+      "Refúgio do Lenhador",
+
+    description:
+      "Abrigo construído na entrada do Bosque Antigo.",
+
+    region:
+      "ancient_forest",
+
+    type:
+      "outpost",
+
+    x:
+      -27,
+
+    z:
+      -8,
+
+    radius:
+      3.5,
+
+    discoveryXp:
+      25,
+
+    discoveryGold:
+      8,
+  },
+
+
+  forest_watchtower: {
+
+    label:
+      "Torre do Bosque",
+
+    description:
+      "Uma velha torre de vigia tomada pela vegetação.",
+
+    region:
+      "ancient_forest",
+
+    type:
+      "tower",
+
+    x:
+      -44,
+
+    z:
+      -28,
+
+    radius:
+      3.5,
+
+    discoveryXp:
+      40,
+
+    discoveryGold:
+      12,
+  },
+
+
+  marsh_outpost: {
+
+    label:
+      "Abrigo da Névoa",
+
+    description:
+      "Abrigo de exploradores nas margens do pântano.",
+
+    region:
+      "mist_marsh",
+
+    type:
+      "outpost",
+
+    x:
+      -17,
+
+    z:
+      30,
+
+    radius:
+      3.5,
+
+    discoveryXp:
+      30,
+
+    discoveryGold:
+      10,
+  },
+
+
+  marsh_shrine: {
+
+    label:
+      "Santuário Afundado",
+
+    description:
+      "Ruínas antigas parcialmente engolidas pelo pântano.",
+
+    region:
+      "mist_marsh",
+
+    type:
+      "shrine",
+
+    x:
+      -43,
+
+    z:
+      44,
+
+    radius:
+      3.6,
+
+    discoveryXp:
+      50,
+
+    discoveryGold:
+      16,
+  },
+
+
+  copper_outpost: {
+
+    label:
+      "Posto das Colinas",
+
+    description:
+      "Acampamento fortificado próximo às minas de cobre.",
+
+    region:
+      "copper_highlands",
+
+    type:
+      "outpost",
+
+    x:
+      27,
+
+    z:
+      23,
+
+    radius:
+      3.5,
+
+    discoveryXp:
+      35,
+
+    discoveryGold:
+      12,
+  },
+
+
+  copper_mine: {
+
+    label:
+      "Mina Abandonada",
+
+    description:
+      "Entrada de uma antiga mina nas Colinas de Cobre.",
+
+    region:
+      "copper_highlands",
+
+    type:
+      "mine",
+
+    x:
+      46,
+
+    z:
+      18,
+
+    radius:
+      3.6,
+
+    discoveryXp:
+      60,
+
+    discoveryGold:
+      22,
+  },
+
+
+  silver_outpost: {
+
+    label:
+      "Posto da Fronteira",
+
+    description:
+      "Último abrigo antes das terras dominadas pelos espectros.",
+
+    region:
+      "silver_frontier",
+
+    type:
+      "outpost",
+
+    x:
+      27,
+
+    z:
+      -28,
+
+    radius:
+      3.5,
+
+    discoveryXp:
+      50,
+
+    discoveryGold:
+      18,
+  },
+
+
+  silver_shrine: {
+
+    label:
+      "Santuário Prateado",
+
+    description:
+      "Ruínas misteriosas envolvidas por energia espectral.",
+
+    region:
+      "silver_frontier",
+
+    type:
+      "shrine",
+
+    x:
+      45,
+
+    z:
+      -45,
+
+    radius:
+      3.7,
+
+    discoveryXp:
+      90,
+
+    discoveryGold:
+      35,
+  },
+
+};
+
+
 export const LOCATIONS = {
 
   merchant: { x: 6, z: -5 },
@@ -2561,6 +2938,237 @@ export const QUESTS = {
     },
 
     rewardText: "150 XP · 80 ouro · 2 Lingotes de Cobre",
+  },
+
+
+
+  landmark_south: {
+
+    npc:
+      "lina",
+
+    title:
+      "As Ruínas do Prado",
+
+    description:
+      "Lina quer descobrir o que restou das ruínas ao sul.",
+
+    requires: [
+      "explore_south",
+    ],
+
+    objectives: [
+      {
+        type:
+          "landmark",
+
+        target:
+          "sunmeadow_ruins",
+
+        amount:
+          1,
+
+        label:
+          "Encontre as Ruínas do Prado",
+      },
+    ],
+
+    reward: {
+      xp:
+        45,
+
+      gold:
+        18,
+
+      items: [],
+    },
+
+    rewardText:
+      "45 XP · 18 ouro",
+  },
+
+
+  landmark_forest: {
+
+    npc:
+      "hunter",
+
+    title:
+      "A Torre Esquecida",
+
+    description:
+      "Kael procura uma antiga torre escondida no bosque.",
+
+    requires: [
+      "explore_forest",
+    ],
+
+    objectives: [
+      {
+        type:
+          "landmark",
+
+        target:
+          "forest_watchtower",
+
+        amount:
+          1,
+
+        label:
+          "Encontre a Torre do Bosque",
+      },
+    ],
+
+    reward: {
+      xp:
+        70,
+
+      gold:
+        28,
+
+      items: [],
+    },
+
+    rewardText:
+      "70 XP · 28 ouro",
+  },
+
+
+  landmark_marsh: {
+
+    npc:
+      "fisherman",
+
+    title:
+      "O Santuário Afundado",
+
+    description:
+      "Nilo ouviu histórias sobre ruínas além da névoa.",
+
+    requires: [
+      "explore_marsh",
+    ],
+
+    objectives: [
+      {
+        type:
+          "landmark",
+
+        target:
+          "marsh_shrine",
+
+        amount:
+          1,
+
+        label:
+          "Encontre o Santuário Afundado",
+      },
+    ],
+
+    reward: {
+      xp:
+        90,
+
+      gold:
+        36,
+
+      items: [],
+    },
+
+    rewardText:
+      "90 XP · 36 ouro",
+  },
+
+
+  landmark_copper: {
+
+    npc:
+      "blacksmith",
+
+    title:
+      "A Mina Abandonada",
+
+    description:
+      "Borin acredita que existe uma antiga mina nas colinas.",
+
+    requires: [
+      "explore_copper",
+    ],
+
+    objectives: [
+      {
+        type:
+          "landmark",
+
+        target:
+          "copper_mine",
+
+        amount:
+          1,
+
+        label:
+          "Encontre a Mina Abandonada",
+      },
+    ],
+
+    reward: {
+      xp:
+        110,
+
+      gold:
+        50,
+
+      items: [],
+    },
+
+    rewardText:
+      "110 XP · 50 ouro",
+  },
+
+
+  landmark_silver: {
+
+    npc:
+      "blacksmith",
+
+    title:
+      "O Santuário Prateado",
+
+    description:
+      "Explore o coração da fronteira e encontre o antigo santuário.",
+
+    requires: [
+      "explore_silver",
+    ],
+
+    objectives: [
+      {
+        type:
+          "landmark",
+
+        target:
+          "silver_shrine",
+
+        amount:
+          1,
+
+        label:
+          "Encontre o Santuário Prateado",
+      },
+    ],
+
+    reward: {
+      xp:
+        180,
+
+      gold:
+        100,
+
+      items: [],
+    },
+
+    rewardText:
+      "180 XP · 100 ouro",
   },
 
 

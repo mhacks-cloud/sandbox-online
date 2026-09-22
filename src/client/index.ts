@@ -20,6 +20,8 @@ import {
   REGION_ORDER,
   REGIONS,
   getRegionAt,
+  LANDMARK_ORDER,
+  LANDMARKS,
   LOCATIONS,
   RARITIES,
   TOOL_TIERS,
@@ -995,6 +997,31 @@ button {
   font-size: 8px;
   line-height: 1.5;
 }
+
+
+.landmark-map-section {
+  margin-top: 9px;
+  padding-top: 7px;
+  border-top: 1px solid #31443a;
+}
+
+.landmark-map-title {
+  margin-bottom: 5px;
+  color: #d0bd83;
+  font-size: 8px;
+}
+
+.landmark-map-item {
+  margin: 3px 0;
+  color: #b7c6bb;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.landmark-map-item.unknown {
+  opacity: .42;
+}
+
 
 
 #toast {
@@ -2487,6 +2514,318 @@ function buildRegionVisuals() {
 }
 
 
+
+function buildLandmarkVisuals() {
+
+  const colors = {
+
+    waystone:
+      0x9fbec4,
+
+    outpost:
+      0x9b7044,
+
+    ruins:
+      0x73766d,
+
+    tower:
+      0x656b68,
+
+    shrine:
+      0x8294a4,
+
+    mine:
+      0x634934,
+  };
+
+
+  for (
+    const id
+    of LANDMARK_ORDER
+  ) {
+
+    const landmark =
+      LANDMARKS[
+        id
+      ];
+
+
+    if (
+      !landmark
+    ) {
+
+      continue;
+    }
+
+
+    const group =
+      new THREE.Group();
+
+
+    const base =
+      new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+          1.9,
+          .3,
+          1.9,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              colors[
+                landmark.type
+              ]
+              ||
+              0x777777,
+          },
+        ),
+      );
+
+
+    base.position.y =
+      .15;
+
+
+    group.add(
+      base,
+    );
+
+
+    if (
+      landmark.type ===
+      "outpost"
+    ) {
+
+      const building =
+        new THREE.Mesh(
+
+          new THREE.BoxGeometry(
+            1.35,
+            1.15,
+            1.35,
+          ),
+
+          new THREE.MeshBasicMaterial(
+            {
+              color:
+                0x74523c,
+            },
+          ),
+        );
+
+
+      building.position.y =
+        .85;
+
+
+      group.add(
+        building,
+      );
+
+
+      const roof =
+        new THREE.Mesh(
+
+          new THREE.ConeGeometry(
+            1.05,
+            .75,
+            4,
+          ),
+
+          new THREE.MeshBasicMaterial(
+            {
+              color:
+                0x473a31,
+            },
+          ),
+        );
+
+
+      roof.rotation.y =
+        Math.PI /
+        4;
+
+
+      roof.position.y =
+        1.8;
+
+
+      group.add(
+        roof,
+      );
+    }
+
+
+    else if (
+      landmark.type ===
+      "tower"
+    ) {
+
+      const tower =
+        new THREE.Mesh(
+
+          new THREE.BoxGeometry(
+            .9,
+            2.9,
+            .9,
+          ),
+
+          new THREE.MeshBasicMaterial(
+            {
+              color:
+                0x686e69,
+            },
+          ),
+        );
+
+
+      tower.position.y =
+        1.6;
+
+
+      group.add(
+        tower,
+      );
+    }
+
+
+    else if (
+      landmark.type ===
+      "mine"
+    ) {
+
+      const mine =
+        new THREE.Mesh(
+
+          new THREE.BoxGeometry(
+            2,
+            1.5,
+            .7,
+          ),
+
+          new THREE.MeshBasicMaterial(
+            {
+              color:
+                0x332a25,
+            },
+          ),
+        );
+
+
+      mine.position.y =
+        .9;
+
+
+      group.add(
+        mine,
+      );
+    }
+
+
+    else if (
+      landmark.type ===
+      "ruins"
+    ) {
+
+      for (
+        const offset
+        of [
+          [-.55, .7],
+          [.55, .45],
+        ]
+      ) {
+
+        const ruin =
+          new THREE.Mesh(
+
+            new THREE.BoxGeometry(
+              .45,
+              offset[
+                1
+              ],
+              .45,
+            ),
+
+            new THREE.MeshBasicMaterial(
+              {
+                color:
+                  0x73766d,
+              },
+            ),
+          );
+
+
+        ruin.position.set(
+          offset[
+            0
+          ],
+
+          offset[
+            1
+          ] /
+          2,
+
+          0,
+        );
+
+
+        group.add(
+          ruin,
+        );
+      }
+    }
+
+
+    else {
+
+      const pillar =
+        new THREE.Mesh(
+
+          new THREE.BoxGeometry(
+            .65,
+            1.8,
+            .65,
+          ),
+
+          new THREE.MeshBasicMaterial(
+            {
+              color:
+                colors[
+                  landmark.type
+                ]
+                ||
+                0x777777,
+            },
+          ),
+        );
+
+
+      pillar.position.y =
+        1;
+
+
+      group.add(
+        pillar,
+      );
+    }
+
+
+    group.position.set(
+      landmark.x,
+      0,
+      landmark.z,
+    );
+
+
+    scene.add(
+      group,
+    );
+  }
+}
+
+
 function buildWorld() {
 
   const grass =
@@ -2842,6 +3181,8 @@ function buildWorld() {
 buildWorld();
 
 buildRegionVisuals();
+
+buildLandmarkVisuals();
 
 addAdvancedFishingSpots();
 
@@ -3458,6 +3799,20 @@ const farmPlots =
 
 const farmStates =
   new Map();
+
+
+/*
+ * Pontos de Interesse conhecidos.
+ *
+ * Não fazem parte do Schema do Player.
+ */
+
+const knownLandmarks =
+  new Set(
+    [
+      "village_waystone",
+    ],
+  );
 
 
 const client =
@@ -4716,6 +5071,7 @@ function updateRegionHud() {
 }
 
 
+
 function renderRegionMap() {
 
   if (
@@ -4726,7 +5082,7 @@ function renderRegionMap() {
   }
 
 
-  const known =
+  const knownRegions =
     new Set(
       discoveredRegions(),
     );
@@ -4743,10 +5099,14 @@ function renderRegionMap() {
 
   regionMapSummary.textContent =
     `${
-      known.size
+      knownRegions.size
     } / ${
       REGION_ORDER.length
-    } regiões descobertas`;
+    } regiões · ${
+      knownLandmarks.size
+    } / ${
+      LANDMARK_ORDER.length
+    } pontos de interesse`;
 
 
   regionMapList.innerHTML =
@@ -4754,19 +5114,19 @@ function renderRegionMap() {
 
 
   for (
-    const id
+    const regionId
     of REGION_ORDER
   ) {
 
     const region =
       REGIONS[
-        id
+        regionId
       ];
 
 
     const discovered =
-      known.has(
-        id,
+      knownRegions.has(
+        regionId,
       );
 
 
@@ -4782,7 +5142,7 @@ function renderRegionMap() {
 
     if (
       current ===
-      id
+      regionId
     ) {
 
       card.classList.add(
@@ -4798,46 +5158,7 @@ function renderRegionMap() {
       card.classList.add(
         "locked",
       );
-    }
 
-
-    if (
-      discovered
-    ) {
-
-      card.innerHTML =
-        `
-          <h3>
-            ${
-              current ===
-              id
-                ? "📍"
-                : "✅"
-            }
-
-            ${region.label}
-          </h3>
-
-          <p>
-            ${region.subtitle}
-          </p>
-
-          <p>
-            Recomendado:
-            Nv.${region.recommendedLevel}
-          </p>
-
-          <div class="region-map-activities">
-            ${
-              region.activities.join(
-                " · ",
-              )
-            }
-          </div>
-        `;
-    }
-
-    else {
 
       card.innerHTML =
         `
@@ -4849,6 +5170,167 @@ function renderRegionMap() {
             Explore o mundo para revelar esta área.
           </p>
         `;
+
+
+      regionMapList.appendChild(
+        card,
+      );
+
+
+      continue;
+    }
+
+
+    card.innerHTML =
+      `
+        <h3>
+          ${
+            current ===
+            regionId
+              ? "📍"
+              : "✅"
+          }
+
+          ${region.label}
+        </h3>
+
+        <p>
+          ${region.subtitle}
+        </p>
+
+        <p>
+          Recomendado:
+          Nv.${region.recommendedLevel}
+        </p>
+
+        <div class="region-map-activities">
+          ${
+            region.activities.join(
+              " · ",
+            )
+          }
+        </div>
+      `;
+
+
+    const ids =
+      LANDMARK_ORDER.filter(
+        (
+          id,
+        ) =>
+          LANDMARKS[
+            id
+          ]?.region ===
+          regionId,
+      );
+
+
+    if (
+      ids.length >
+      0
+    ) {
+
+      const section =
+        document.createElement(
+          "div",
+        );
+
+
+      section.className =
+        "landmark-map-section";
+
+
+      const amount =
+        ids.filter(
+          (
+            id,
+          ) =>
+            knownLandmarks.has(
+              id,
+            ),
+        )
+        .length;
+
+
+      const title =
+        document.createElement(
+          "div",
+        );
+
+
+      title.className =
+        "landmark-map-title";
+
+
+      title.textContent =
+        `Pontos de Interesse: ${
+          amount
+        } / ${
+          ids.length
+        }`;
+
+
+      section.appendChild(
+        title,
+      );
+
+
+      for (
+        const id
+        of ids
+      ) {
+
+        const landmark =
+          LANDMARKS[
+            id
+          ];
+
+
+        const row =
+          document.createElement(
+            "div",
+          );
+
+
+        row.className =
+          "landmark-map-item";
+
+
+        if (
+          knownLandmarks.has(
+            id,
+          )
+        ) {
+
+          row.textContent =
+            `✅ ${
+              landmark.label
+            } · ${
+              landmark.description
+            }`;
+        }
+
+        else {
+
+          row.classList.add(
+            "unknown",
+          );
+
+
+          row.textContent =
+            "⬜ Local ainda não descoberto";
+        }
+
+
+        section.appendChild(
+          row,
+        );
+      }
+
+
+      card.appendChild(
+        section,
+      );
     }
 
 
@@ -5871,6 +6353,108 @@ async function connect() {
 
 
 
+
+    room.onMessage(
+      "exploration-state",
+
+      (
+        message,
+      ) => {
+
+        knownLandmarks.clear();
+
+
+        for (
+          const raw
+          of (
+            Array.isArray(
+              message?.landmarks,
+            )
+              ? message.landmarks
+              : []
+          )
+        ) {
+
+          const id =
+            String(
+              raw
+              ||
+              "",
+            );
+
+
+          if (
+            LANDMARKS[
+              id
+            ]
+          ) {
+
+            knownLandmarks.add(
+              id,
+            );
+          }
+        }
+
+
+        knownLandmarks.add(
+          "village_waystone",
+        );
+
+
+        renderRegionMap();
+      },
+    );
+
+
+    room.onMessage(
+      "landmark-discovered",
+
+      (
+        message,
+      ) => {
+
+        const id =
+          String(
+            message?.id
+            ||
+            "",
+          );
+
+
+        if (
+          LANDMARKS[
+            id
+          ]
+        ) {
+
+          knownLandmarks.add(
+            id,
+          );
+        }
+
+
+        showToast(
+          `📍 Descoberto: ${
+            message?.label
+            ||
+            "local"
+          } · +${
+            message?.xp
+            ||
+            0
+          } XP · +${
+            message?.gold
+            ||
+            0
+          } ouro`,
+        );
+
+
+        renderRegionMap();
+      },
+    );
+
+
     room.onMessage(
       "region-discovered",
 
@@ -6015,6 +6599,12 @@ async function connect() {
           "quests",
         );
       },
+    );
+
+
+    room.send(
+      "request-exploration-state",
+      {},
     );
 
 
