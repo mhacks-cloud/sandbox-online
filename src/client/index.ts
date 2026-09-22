@@ -1233,6 +1233,21 @@ const interaction =
 const shopPanel =
   $("#shop-panel");
 
+
+const shopEyebrow =
+  shopPanel
+    ?.querySelector(
+      ".eyebrow",
+    );
+
+
+const shopHeading =
+  shopPanel
+    ?.querySelector(
+      "h2",
+    );
+
+
 const craftPanel =
   $("#craft-panel");
 
@@ -1244,6 +1259,21 @@ const craftStationTitle =
 
 const chestPanel =
   $("#chest-panel");
+
+
+const chestEyebrow =
+  chestPanel
+    ?.querySelector(
+      ".eyebrow",
+    );
+
+
+const chestHeading =
+  chestPanel
+    ?.querySelector(
+      "h2",
+    );
+
 
 const chestGrid =
   $("#chest-grid");
@@ -5803,6 +5833,61 @@ function openModal(
 
 
 
+
+/*
+ * ETAPA 11.3E SERVICE IDENTITY
+ *
+ * Apenas muda textos dos painéis.
+ * Nenhuma lógica de serviço é alterada.
+ */
+
+function serviceIdentity(
+  source,
+) {
+
+  const id =
+    String(
+      source
+      ||
+      "",
+    );
+
+
+  const service =
+    OUTPOST_SERVICES[
+      id
+    ];
+
+
+  const landmark =
+    LANDMARKS[
+      id
+    ];
+
+
+  if (
+    !service
+    ||
+    !landmark
+  ) {
+
+    return null;
+  }
+
+
+  return {
+
+    id,
+
+    serviceLabel:
+      service.label,
+
+    landmarkLabel:
+      landmark.label,
+  };
+}
+
+
 function renderCrafting(
   station,
 ) {
@@ -6988,20 +7073,132 @@ async function connect() {
     room.onMessage(
       "open-shop",
 
-      () =>
+      (
+        message,
+      ) => {
+
+        const identity =
+          serviceIdentity(
+            message?.source,
+          );
+
+
+        if (
+          identity
+        ) {
+
+          if (
+            shopEyebrow
+          ) {
+
+            shopEyebrow.textContent =
+              identity
+                .landmarkLabel
+                .toUpperCase();
+          }
+
+
+          if (
+            shopHeading
+          ) {
+
+            shopHeading.textContent =
+              identity
+                .serviceLabel;
+          }
+        }
+
+        else {
+
+          if (
+            shopEyebrow
+          ) {
+
+            shopEyebrow.textContent =
+              "OTTO · COMERCIANTE";
+          }
+
+
+          if (
+            shopHeading
+          ) {
+
+            shopHeading.textContent =
+              "Mercado da Vila";
+          }
+        }
+
+
         openModal(
           "shop",
-        ),
+        );
+      },
     );
 
 
     room.onMessage(
       "open-chest",
 
-      () =>
+      (
+        message,
+      ) => {
+
+        const identity =
+          serviceIdentity(
+            message?.source,
+          );
+
+
+        if (
+          identity
+        ) {
+
+          if (
+            chestEyebrow
+          ) {
+
+            chestEyebrow.textContent =
+              identity
+                .landmarkLabel
+                .toUpperCase();
+          }
+
+
+          if (
+            chestHeading
+          ) {
+
+            chestHeading.textContent =
+              identity
+                .serviceLabel;
+          }
+        }
+
+        else {
+
+          if (
+            chestEyebrow
+          ) {
+
+            chestEyebrow.textContent =
+              "BAÚ PESSOAL";
+          }
+
+
+          if (
+            chestHeading
+          ) {
+
+            chestHeading.textContent =
+              "Armazenamento";
+          }
+        }
+
+
         openModal(
           "chest",
-        ),
+        );
+      },
     );
 
 
@@ -7015,6 +7212,23 @@ async function connect() {
         renderCrafting(
           message?.station,
         );
+
+
+        const identity =
+          serviceIdentity(
+            message?.source,
+          );
+
+
+        if (
+          identity
+        ) {
+
+          craftStationTitle.textContent =
+            identity
+              .serviceLabel
+              .toUpperCase();
+        }
 
 
         openModal(
