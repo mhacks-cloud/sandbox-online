@@ -42,6 +42,20 @@ const server = defineServer({
    */
   express: (app) => {
 
+    app.get(
+      "/health",
+      (_req, res) => {
+
+        res
+          .status(200)
+          .json({
+            ok: true,
+            service: "sandbox-online",
+          });
+      },
+    );
+
+
     app.get("/hi", (req, res) => {
       res.send("It's time to kick ass and chew bubblegum!");
     });
