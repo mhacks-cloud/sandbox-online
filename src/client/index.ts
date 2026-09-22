@@ -44,6 +44,14 @@ import {
   regionalMarketForSource,
 } from "../shared/regionalWorld";
 
+import {
+  REGION_BOARD_NPC,
+  REGIONAL_CONTRACT_BY_ID,
+  reputationTier,
+  regionalPrice,
+  regionalEventAt,
+} from "../shared/regionalProgression";
+
 
 const EQUIPMENT_LABELS = {
 
@@ -318,6 +326,58 @@ document.body.insertAdjacentHTML(
         🪙 NEGOCIAR
       </button>
 
+      <button
+        id="regional-dialog-contracts"
+        class="quest-action"
+        type="button"
+        style="margin-top:8px"
+      >
+        📜 CONTRATOS REGIONAIS
+      </button>
+
+    </div>
+  </div>
+
+
+  <div
+    id="regional-contract-panel"
+    class="panel modal interactive"
+  >
+    <button
+      class="modal-close"
+      data-close-modal
+    >
+      ×
+    </button>
+
+    <div
+      id="regional-contract-region"
+      class="eyebrow"
+    >
+      CONTRATOS REGIONAIS
+    </div>
+
+    <h2>
+      Quadro de Contratos
+    </h2>
+
+    <div
+      id="regional-reputation-summary"
+      class="profession-info"
+    >
+    </div>
+
+    <div
+      id="regional-event-box"
+      class="quest-card"
+      style="margin-top:12px"
+    >
+    </div>
+
+    <div
+      id="regional-contract-list"
+      style="margin-top:12px"
+    >
     </div>
   </div>
 
@@ -1331,6 +1391,25 @@ const regionalDialogTip =
 
 const regionalDialogMarketButton =
   $("#regional-dialog-market");
+
+const regionalDialogContractsButton =
+  $("#regional-dialog-contracts");
+
+
+const regionalContractPanel =
+  $("#regional-contract-panel");
+
+const regionalContractRegion =
+  $("#regional-contract-region");
+
+const regionalReputationSummary =
+  $("#regional-reputation-summary");
+
+const regionalEventBox =
+  $("#regional-event-box");
+
+const regionalContractList =
+  $("#regional-contract-list");
 
 
 const questPanel =
@@ -4223,6 +4302,29 @@ let activeRegionalNpc =
 let activeShopSource =
   "";
 
+let regionalProgressState = {
+
+  reputation:
+    {},
+
+  contracts:
+    {},
+
+  completedDays:
+    {},
+
+  event:
+    {},
+};
+
+let regionalActiveEvent =
+  regionalEventAt(
+    Date.now(),
+  );
+
+let regionalBoardState =
+  null;
+
 let toastTimer;
 
 
@@ -5672,6 +5774,104 @@ function renderRegionMap() {
       `;
 
 
+    /*
+     * ETAPA 13
+     * Reputação + evento regional.
+     */
+
+    if (
+      REGION_BOARD_NPC[
+        regionId
+      ]
+    ) {
+
+      const reputation =
+        currentRegionalReputation(
+          regionId,
+        );
+
+
+      const tier =
+        reputationTier(
+          reputation,
+        );
+
+
+      const reputationLine =
+        document.createElement(
+          "div",
+        );
+
+
+      reputationLine.className =
+        "profession-info";
+
+
+      reputationLine.textContent =
+        `⭐ Reputação: ${
+          reputation
+        } · ${
+          tier.label
+        }`;
+
+
+      card.appendChild(
+        reputationLine,
+      );
+    }
+
+
+    const event =
+      regionalActiveEvent
+      ||
+      regionalEventAt(
+        Date.now(),
+      );
+
+
+    if (
+      event?.region ===
+      regionId
+    ) {
+
+      const eventLine =
+        document.createElement(
+          "div",
+        );
+
+
+      eventLine.className =
+        "profession-info";
+
+
+      const eventProgress =
+        regionalProgressState
+          ?.event?.key ===
+        event.key
+          ? regionalProgressState
+              .event
+              .progress
+            ||
+            0
+          : 0;
+
+
+      eventLine.textContent =
+        `⚠️ EVENTO: ${
+          event.title
+        } · ${
+          eventProgress
+        }/${
+          event.amount
+        }`;
+
+
+      card.appendChild(
+        eventLine,
+      );
+    }
+
+
     const ids =
       LANDMARK_ORDER.filter(
         (
@@ -6018,6 +6218,10 @@ function closeModals() {
     "none";
 
 
+  regionalContractPanel.style.display =
+    "none";
+
+
   questPanel.style.display =
     "none";
 
@@ -6047,6 +6251,7 @@ function openModal(
     craft: craftPanel,
     chest: chestPanel,
     regional: regionalDialogPanel,
+    contracts: regionalContractPanel,
     quests: questPanel,
     professions: professionPanel,
     regions: regionMapPanel,
@@ -6329,6 +6534,504 @@ $("#inventory-close")
     };
 
 
+function currentRegionalReputation(
+  region,
+) {
+
+  return Math.max(
+    0,
+
+    Number(
+      regionalProgressState
+        ?.reputation?.[
+          region
+        ],
+    )
+    ||
+    0,
+  );
+}
+
+
+function renderRegionalBoard(
+  message,
+) {
+
+  regionalBoardState =
+    message;
+
+
+  const region =
+    String(
+      message?.region
+      ||
+      "",
+    );
+
+
+  const npcId =
+    String(
+      message?.npc
+      ||
+      "",
+    );
+
+
+  const npc =
+    REGIONAL_NPCS[
+      npcId
+    ];
+
+
+  regionalProgressState =
+    message?.progress
+    ||
+    regionalProgressState;
+
+
+  regionalActiveEvent =
+    message?.event
+    ||
+    regionalEventAt(
+      Date.now(),
+    );
+
+
+  const reputation =
+    currentRegionalReputation(
+      region,
+    );
+
+
+  const tier =
+    reputationTier(
+      reputation,
+    );
+
+
+  regionalContractRegion.textContent =
+    `${
+      REGIONS[
+        region
+      ]?.label
+      ||
+      region
+    } · ${
+      npc?.name
+      ||
+      "REGIÃO"
+    }`
+      .toUpperCase();
+
+
+  regionalReputationSummary.innerHTML =
+    `
+      ⭐ Reputação:
+      <strong>${reputation}</strong>
+      · ${tier.label}
+      <br>
+      🪙 Compra:
+      -${Math.round(
+        tier.buyDiscount *
+        100
+      )}%
+      · Venda:
+      +${Math.round(
+        tier.sellBonus *
+        100
+      )}%
+    `;
+
+
+  const event =
+    regionalActiveEvent;
+
+
+  if (
+    event?.region ===
+    region
+  ) {
+
+    const state =
+      regionalProgressState.event
+      ||
+      {};
+
+
+    const matching =
+      state.key ===
+      event.key;
+
+
+    const eventProgress =
+      matching
+        ? Number(
+            state.progress,
+          )
+          ||
+          0
+        : 0;
+
+
+    const claimed =
+      matching
+      &&
+      Boolean(
+        state.claimed,
+      );
+
+
+    const minutes =
+      Math.max(
+        0,
+
+        Math.ceil(
+          (
+            event.endsAt
+            -
+            Date.now()
+          )
+          /
+          60000,
+        ),
+      );
+
+
+    regionalEventBox.innerHTML =
+      `
+        <h3>
+          ⚠️ EVENTO · ${event.title}
+        </h3>
+
+        <p>
+          ${event.description}
+        </p>
+
+        <div class="quest-objective">
+          Progresso:
+          ${eventProgress}/${event.amount}
+        </div>
+
+        <div class="quest-reward">
+          ${event.reward.gold} ouro ·
+          ${event.reward.xp} XP ·
+          ${event.reward.reputation} reputação
+        </div>
+
+        <div class="profession-info">
+          ⏱ aproximadamente ${minutes} min restantes
+        </div>
+      `;
+
+
+    const button =
+      document.createElement(
+        "button",
+      );
+
+
+    button.className =
+      "quest-action";
+
+
+    if (
+      claimed
+    ) {
+
+      button.disabled =
+        true;
+
+
+      button.textContent =
+        "✅ RECOMPENSA RECEBIDA";
+    }
+
+    else if (
+      eventProgress >=
+      event.amount
+    ) {
+
+      button.textContent =
+        "🏆 RECEBER RECOMPENSA";
+
+
+      button.onclick =
+        () =>
+          room?.send(
+            "regional-event-claim",
+
+            {
+              npc:
+                npcId,
+            },
+          );
+    }
+
+    else {
+
+      button.disabled =
+        true;
+
+
+      button.textContent =
+        "⚔ EVENTO EM ANDAMENTO";
+    }
+
+
+    regionalEventBox.appendChild(
+      button,
+    );
+  }
+
+  else {
+
+    regionalEventBox.innerHTML =
+      `
+        <h3>
+          🌎 Evento Mundial
+        </h3>
+
+        <p>
+          Evento atual:
+          <strong>
+            ${
+              event?.title
+              ||
+              "Nenhum"
+            }
+          </strong>
+        </p>
+
+        <div class="profession-info">
+          Região:
+          ${
+            REGIONS[
+              event?.region
+            ]?.label
+            ||
+            "desconhecida"
+          }
+        </div>
+      `;
+  }
+
+
+  regionalContractList.innerHTML =
+    "";
+
+
+  const ids =
+    Array.isArray(
+      message?.contractIds,
+    )
+      ? message.contractIds
+      : [];
+
+
+  for (
+    const id
+    of ids
+  ) {
+
+    const contract =
+      REGIONAL_CONTRACT_BY_ID[
+        id
+      ];
+
+
+    if (
+      !contract
+    ) {
+
+      continue;
+    }
+
+
+    const state =
+      regionalProgressState
+        .contracts?.[
+          id
+        ];
+
+
+    const completed =
+      regionalProgressState
+        .completedDays?.[
+          id
+        ]
+      ===
+      message.dayKey;
+
+
+    const progress =
+      Math.min(
+        contract.amount,
+
+        Number(
+          state?.progress,
+        )
+        ||
+        0,
+      );
+
+
+    const card =
+      document.createElement(
+        "div",
+      );
+
+
+    card.className =
+      "quest-card";
+
+
+    if (
+      state?.status ===
+      "ready"
+    ) {
+
+      card.classList.add(
+        "ready",
+      );
+    }
+
+
+    if (
+      completed
+    ) {
+
+      card.classList.add(
+        "done",
+      );
+    }
+
+
+    card.innerHTML =
+      `
+        <h3>
+          📜 ${contract.title}
+        </h3>
+
+        <p>
+          ${contract.description}
+        </p>
+
+        <div class="quest-objective">
+          Progresso:
+          ${progress}/${contract.amount}
+        </div>
+
+        <div class="quest-reward">
+          Recompensa:
+          ${contract.reward.gold} ouro ·
+          ${contract.reward.xp} XP ·
+          ${contract.reward.reputation} reputação
+        </div>
+      `;
+
+
+    const button =
+      document.createElement(
+        "button",
+      );
+
+
+    button.className =
+      "quest-action";
+
+
+    if (
+      completed
+    ) {
+
+      button.disabled =
+        true;
+
+
+      button.textContent =
+        "✅ CONCLUÍDO HOJE";
+    }
+
+    else if (
+      state?.status ===
+      "ready"
+    ) {
+
+      button.textContent =
+        "🏆 RECEBER RECOMPENSA";
+
+
+      button.onclick =
+        () =>
+          room?.send(
+            "regional-contract-action",
+
+            {
+              action:
+                "claim",
+
+              contractId:
+                id,
+            },
+          );
+    }
+
+    else if (
+      state?.status ===
+      "active"
+    ) {
+
+      button.disabled =
+        true;
+
+
+      button.textContent =
+        "📌 EM ANDAMENTO";
+    }
+
+    else {
+
+      button.textContent =
+        "ACEITAR CONTRATO";
+
+
+      button.onclick =
+        () =>
+          room?.send(
+            "regional-contract-action",
+
+            {
+              action:
+                "accept",
+
+              contractId:
+                id,
+            },
+          );
+    }
+
+
+    card.appendChild(
+      button,
+    );
+
+
+    regionalContractList.appendChild(
+      card,
+    );
+  }
+
+
+  if (
+    !regionalContractList.children.length
+  ) {
+
+    regionalContractList.textContent =
+      "Nenhum contrato disponível.";
+  }
+}
+
+
 function villageShopData() {
 
   const buy =
@@ -6408,6 +7111,14 @@ function renderShopMarket(
 
   let data;
 
+  let reputation =
+    0;
+
+  let tier =
+    reputationTier(
+      0,
+    );
+
 
   if (
     regional
@@ -6417,25 +7128,52 @@ function renderShopMarket(
       regional;
 
 
+    const marketRegion =
+      REGIONAL_NPCS[
+        regional.id
+      ]?.region
+      ||
+      "";
+
+
+    reputation =
+      currentRegionalReputation(
+        marketRegion,
+      );
+
+
+    tier =
+      reputationTier(
+        reputation,
+      );
+
+
     if (
       identity
     ) {
 
       shopEyebrow.textContent =
-        identity
-          .landmarkLabel
+        `${
+          identity.landmarkLabel
+        } · ${
+          tier.label
+        }`
           .toUpperCase();
 
 
       shopHeading.textContent =
-        identity
-          .serviceLabel;
+        identity.serviceLabel;
     }
 
     else {
 
       shopEyebrow.textContent =
-        regional.eyebrow;
+        `${
+          regional.eyebrow
+        } · ${
+          tier.label
+        }`
+          .toUpperCase();
 
 
       shopHeading.textContent =
@@ -6469,7 +7207,7 @@ function renderShopMarket(
   for (
     const [
       id,
-      price,
+      basePrice,
     ]
     of Object.entries(
       data.buy
@@ -6490,6 +7228,16 @@ function renderShopMarket(
 
       continue;
     }
+
+
+    const price =
+      regional
+        ? regionalPrice(
+            basePrice,
+            reputation,
+            "buy",
+          )
+        : basePrice;
 
 
     const button =
@@ -6564,8 +7312,7 @@ function renderShopMarket(
 
 
     button.onclick =
-      () => {
-
+      () =>
         room?.send(
           "buy",
 
@@ -6577,7 +7324,6 @@ function renderShopMarket(
               activeShopSource,
           },
         );
-      };
 
 
     shopBuyList.appendChild(
@@ -6598,7 +7344,7 @@ function renderShopMarket(
   for (
     const [
       id,
-      price,
+      basePrice,
     ]
     of Object.entries(
       data.sell
@@ -6619,6 +7365,16 @@ function renderShopMarket(
 
       continue;
     }
+
+
+    const price =
+      regional
+        ? regionalPrice(
+            basePrice,
+            reputation,
+            "sell",
+          )
+        : basePrice;
 
 
     const button =
@@ -6644,8 +7400,7 @@ function renderShopMarket(
 
 
     button.onclick =
-      () => {
-
+      () =>
         room?.send(
           "sell",
 
@@ -6657,7 +7412,6 @@ function renderShopMarket(
               activeShopSource,
           },
         );
-      };
 
 
     shopSellList.appendChild(
@@ -6681,8 +7435,7 @@ function renderShopMarket(
 
 
   sellAll.onclick =
-    () => {
-
+    () =>
       room?.send(
         "sell",
 
@@ -6694,7 +7447,6 @@ function renderShopMarket(
             activeShopSource,
         },
       );
-    };
 
 
   shopSellList.appendChild(
@@ -6716,6 +7468,28 @@ regionalDialogMarketButton.onclick =
 
     room?.send(
       "regional-shop",
+
+      {
+        npc:
+          activeRegionalNpc,
+      },
+    );
+  };
+
+
+regionalDialogContractsButton.onclick =
+  () => {
+
+    if (
+      !activeRegionalNpc
+    ) {
+
+      return;
+    }
+
+
+    room?.send(
+      "regional-board",
 
       {
         npc:
@@ -7864,6 +8638,15 @@ async function connect() {
             : "none";
 
 
+        regionalDialogContractsButton.style.display =
+          REGION_BOARD_NPC[
+            message?.region
+          ] ===
+          activeRegionalNpc
+            ? "block"
+            : "none";
+
+
         if (
           market
         ) {
@@ -7880,6 +8663,103 @@ async function connect() {
         openModal(
           "regional",
         );
+      },
+    );
+
+
+    room.onMessage(
+      "regional-progress-state",
+
+      (
+        message,
+      ) => {
+
+        regionalProgressState =
+          message?.progress
+          ||
+          regionalProgressState;
+
+
+        regionalActiveEvent =
+          message?.event
+          ||
+          regionalEventAt(
+            Date.now(),
+          );
+
+
+        renderRegionMap();
+
+
+        if (
+          activeModal ===
+          "contracts"
+          &&
+          regionalBoardState
+        ) {
+
+          renderRegionalBoard(
+            {
+
+              ...regionalBoardState,
+
+              progress:
+                regionalProgressState,
+
+              event:
+                regionalActiveEvent,
+            },
+          );
+        }
+
+
+        if (
+          activeModal ===
+          "shop"
+          &&
+          activeShopSource
+        ) {
+
+          renderShopMarket(
+            activeShopSource,
+          );
+        }
+      },
+    );
+
+
+    room.onMessage(
+      "regional-board-state",
+
+      (
+        message,
+      ) => {
+
+        regionalProgressState =
+          message?.progress
+          ||
+          regionalProgressState;
+
+
+        regionalActiveEvent =
+          message?.event
+          ||
+          regionalEventAt(
+            Date.now(),
+          );
+
+
+        renderRegionalBoard(
+          message,
+        );
+
+
+        openModal(
+          "contracts",
+        );
+
+
+        renderRegionMap();
       },
     );
 
@@ -7910,6 +8790,12 @@ async function connect() {
 
     room.send(
       "request-exploration-state",
+      {},
+    );
+
+
+    room.send(
+      "request-regional-progress",
       {},
     );
 

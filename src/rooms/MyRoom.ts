@@ -61,6 +61,16 @@ import {
 } from "../shared/regionalWorld";
 
 import {
+  REGION_BOARD_NPC,
+  REGIONAL_CONTRACT_BY_ID,
+  contractDayKey,
+  contractsForRegion,
+  normalizeRegionalProgress,
+  regionalEventAt,
+  regionalPrice,
+} from "../shared/regionalProgression";
+
+import {
   loadWorldSave,
   saveWorldSave,
   snapshotFarmPlots,
@@ -1357,6 +1367,48 @@ export class MyRoom
         ),
 
 
+    "request-regional-progress":
+      (
+        client,
+      ) =>
+        this.sendRegionalProgressState(
+          client,
+        ),
+
+
+    "regional-board":
+      (
+        client,
+        payload,
+      ) =>
+        this.sendRegionalBoard(
+          client,
+          payload,
+        ),
+
+
+    "regional-contract-action":
+      (
+        client,
+        payload,
+      ) =>
+        this.regionalContractAction(
+          client,
+          payload,
+        ),
+
+
+    "regional-event-claim":
+      (
+        client,
+        payload,
+      ) =>
+        this.regionalEventClaim(
+          client,
+          payload,
+        ),
+
+
     "request-exploration-state":
       (
         client,
@@ -1400,7 +1452,7 @@ export class MyRoom
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 12:",
+      "🌎 Sandbox Online Etapa 13:",
       this.roomId,
     );
 
@@ -6940,6 +6992,95 @@ export class MyRoom
   }
 
 
+  regionalShopPrice(
+    sessionId,
+    context,
+    itemId,
+    mode,
+  ) {
+
+    if (
+      !context?.regional
+    ) {
+
+      return Math.max(
+        0,
+
+        Number(
+          ITEM_CATALOG[
+            itemId
+          ]?.[
+            mode
+          ],
+        )
+        ||
+        0,
+      );
+    }
+
+
+    const base =
+      Math.max(
+        0,
+
+        Number(
+          context
+            .market?.[
+              mode
+            ]?.[
+              itemId
+            ],
+        )
+        ||
+        0,
+      );
+
+
+    if (
+      base <=
+      0
+    ) {
+
+      return 0;
+    }
+
+
+    const region =
+      REGIONAL_NPCS[
+        context.market.id
+      ]?.region;
+
+
+    if (
+      !region
+    ) {
+
+      return base;
+    }
+
+
+    const progress =
+      this.getRegionalProgress(
+        sessionId,
+      );
+
+
+    return regionalPrice(
+
+      base,
+
+      progress
+        .reputation?.[
+          region
+        ]
+      ||
+      0,
+
+      mode,
+    );
+  }
+
+
   sell(
     client,
     payload,
@@ -6995,32 +7136,13 @@ export class MyRoom
     const priceFor =
       (
         id,
-      ) => {
-
-        if (
-          context.regional
-        ) {
-
-          return Number(
-            context
-              .market
-              .sell?.[
-                id
-              ],
-          )
-          ||
-          0;
-        }
-
-
-        return Number(
-          ITEM_CATALOG[
-            id
-          ]?.sell,
-        )
-        ||
-        0;
-      };
+      ) =>
+        this.regionalShopPrice(
+          client.sessionId,
+          context,
+          id,
+          "sell",
+        );
 
 
     const sellOneType =
@@ -7233,35 +7355,13 @@ export class MyRoom
     }
 
 
-    let price =
-      0;
-
-
-    if (
-      context.regional
-    ) {
-
-      price =
-        Number(
-          context
-            .market
-            .buy?.[
-              id
-            ],
-        )
-        ||
-        0;
-    }
-
-    else {
-
-      price =
-        Number(
-          definition.buy,
-        )
-        ||
-        0;
-    }
+    const price =
+      this.regionalShopPrice(
+        client.sessionId,
+        context,
+        id,
+        "buy",
+      );
 
 
     if (
@@ -8348,6 +8448,15 @@ export class MyRoom
         states,
       );
     }
+
+
+    this.regionalContractEvent(
+      player,
+      type,
+      target,
+      amount,
+      client,
+    );
   }
 
 
@@ -9001,6 +9110,933 @@ export class MyRoom
   }
 
 
+  getRegionalProgress(
+    sessionId,
+  ) {
+
+    const profile =
+      this.profiles.get(
+        sessionId,
+      );
+
+
+    if (
+      !profile
+    ) {
+
+      return normalizeRegionalProgress(
+        {},
+      );
+    }
+
+
+    if (
+      !this.saves[
+        profile
+      ]
+    ) {
+
+      this.saves[
+        profile
+      ] =
+        {};
+    }
+
+
+    const progress =
+      normalizeRegionalProgress(
+
+        this.saves[
+          profile
+        ]?.regionalProgress,
+
+        Date.now(),
+      );
+
+
+    this.saves[
+      profile
+    ].regionalProgress =
+      progress;
+
+
+    return progress;
+  }
+
+
+  setRegionalProgress(
+    sessionId,
+    progress,
+  ) {
+
+    const profile =
+      this.profiles.get(
+        sessionId,
+      );
+
+
+    if (
+      !profile
+    ) {
+
+      return;
+    }
+
+
+    if (
+      !this.saves[
+        profile
+      ]
+    ) {
+
+      this.saves[
+        profile
+      ] =
+        {};
+    }
+
+
+    this.saves[
+      profile
+    ].regionalProgress =
+      normalizeRegionalProgress(
+        progress,
+        Date.now(),
+      );
+  }
+
+
+  sendRegionalProgressState(
+    client,
+  ) {
+
+    client.send(
+      "regional-progress-state",
+
+      {
+
+        progress:
+          this.getRegionalProgress(
+            client.sessionId,
+          ),
+
+        event:
+          regionalEventAt(
+            Date.now(),
+          ),
+      },
+    );
+  }
+
+
+  regionalBoardNpcValid(
+    player,
+    region,
+  ) {
+
+    const requiredNpc =
+      REGION_BOARD_NPC[
+        region
+      ];
+
+
+    if (
+      !requiredNpc
+    ) {
+
+      return false;
+    }
+
+
+    const nearest =
+      this.findNearestRegionalNpc(
+        player.x,
+        player.z,
+        3.2,
+      );
+
+
+    return (
+      nearest?.id ===
+      requiredNpc
+    );
+  }
+
+
+  sendRegionalBoard(
+    client,
+    payload,
+  ) {
+
+    const player =
+      this.state.players.get(
+        client.sessionId,
+      );
+
+
+    if (
+      !player
+    ) {
+
+      return;
+    }
+
+
+    const npcId =
+      String(
+        payload?.npc
+        ||
+        "",
+      );
+
+
+    const npc =
+      REGIONAL_NPCS[
+        npcId
+      ];
+
+
+    if (
+      !npc
+      ||
+      REGION_BOARD_NPC[
+        npc.region
+      ] !==
+      npcId
+    ) {
+
+      return;
+    }
+
+
+    const nearest =
+      this.findNearestRegionalNpc(
+        player.x,
+        player.z,
+        3.2,
+      );
+
+
+    if (
+      nearest?.id !==
+      npcId
+    ) {
+
+      client.send(
+        "toast",
+
+        {
+          text:
+            "Aproxime-se do representante regional.",
+        },
+      );
+
+
+      return;
+    }
+
+
+    const now =
+      Date.now();
+
+
+    client.send(
+      "regional-board-state",
+
+      {
+
+        npc:
+          npcId,
+
+        region:
+          npc.region,
+
+        dayKey:
+          contractDayKey(
+            now,
+          ),
+
+        contractIds:
+          contractsForRegion(
+            npc.region,
+            now,
+          )
+            .map(
+              contract =>
+                contract.id,
+            ),
+
+        progress:
+          this.getRegionalProgress(
+            client.sessionId,
+          ),
+
+        event:
+          regionalEventAt(
+            now,
+          ),
+      },
+    );
+  }
+
+
+  regionalContractAction(
+    client,
+    payload,
+  ) {
+
+    const player =
+      this.state.players.get(
+        client.sessionId,
+      );
+
+
+    if (
+      !player
+    ) {
+
+      return;
+    }
+
+
+    const contractId =
+      String(
+        payload?.contractId
+        ||
+        "",
+      );
+
+
+    const action =
+      String(
+        payload?.action
+        ||
+        "",
+      );
+
+
+    const contract =
+      REGIONAL_CONTRACT_BY_ID[
+        contractId
+      ];
+
+
+    if (
+      !contract
+    ) {
+
+      return;
+    }
+
+
+    if (
+      !this.regionalBoardNpcValid(
+        player,
+        contract.region,
+      )
+    ) {
+
+      client.send(
+        "toast",
+
+        {
+          text:
+            "Volte ao representante da região.",
+        },
+      );
+
+
+      return;
+    }
+
+
+    const now =
+      Date.now();
+
+
+    const today =
+      contractDayKey(
+        now,
+      );
+
+
+    const board =
+      contractsForRegion(
+        contract.region,
+        now,
+      );
+
+
+    const progress =
+      this.getRegionalProgress(
+        client.sessionId,
+      );
+
+
+    if (
+      action ===
+      "accept"
+    ) {
+
+      if (
+        !board.some(
+          item =>
+            item.id ===
+            contractId,
+        )
+      ) {
+
+        return;
+      }
+
+
+      if (
+        progress.completedDays[
+          contractId
+        ] ===
+        today
+      ) {
+
+        client.send(
+          "toast",
+
+          {
+            text:
+              "Contrato já concluído hoje.",
+          },
+        );
+
+
+        return;
+      }
+
+
+      if (
+        progress.contracts[
+          contractId
+        ]
+      ) {
+
+        return;
+      }
+
+
+      progress.contracts[
+        contractId
+      ] = {
+
+        dayKey:
+          today,
+
+        progress:
+          0,
+
+        status:
+          "active",
+      };
+
+
+      this.setRegionalProgress(
+        client.sessionId,
+        progress,
+      );
+
+
+      this.persist(
+        client.sessionId,
+        true,
+      );
+
+
+      client.send(
+        "toast",
+
+        {
+          text:
+            `Contrato aceito: ${
+              contract.title
+            }`,
+        },
+      );
+    }
+
+
+    else if (
+      action ===
+      "claim"
+    ) {
+
+      const state =
+        progress.contracts[
+          contractId
+        ];
+
+
+      if (
+        !state
+        ||
+        state.status !==
+        "ready"
+      ) {
+
+        return;
+      }
+
+
+      player.gold +=
+        contract.reward.gold;
+
+
+      this.addXp(
+        player,
+        contract.reward.xp,
+      );
+
+
+      progress.reputation[
+        contract.region
+      ] =
+        Math.max(
+          0,
+
+          Number(
+            progress.reputation[
+              contract.region
+            ],
+          )
+          ||
+          0,
+        )
+        +
+        contract.reward.reputation;
+
+
+      delete progress.contracts[
+        contractId
+      ];
+
+
+      progress.completedDays[
+        contractId
+      ] =
+        today;
+
+
+      this.setRegionalProgress(
+        client.sessionId,
+        progress,
+      );
+
+
+      this.persist(
+        client.sessionId,
+        true,
+      );
+
+
+      client.send(
+        "toast",
+
+        {
+          text:
+            `Contrato concluído · +${
+              contract.reward.gold
+            } ouro · +${
+              contract.reward.reputation
+            } reputação`,
+        },
+      );
+    }
+
+    else {
+
+      return;
+    }
+
+
+    this.sendRegionalProgressState(
+      client,
+    );
+
+
+    this.sendRegionalBoard(
+      client,
+
+      {
+        npc:
+          REGION_BOARD_NPC[
+            contract.region
+          ],
+      },
+    );
+  }
+
+
+  regionalEventClaim(
+    client,
+    payload,
+  ) {
+
+    const player =
+      this.state.players.get(
+        client.sessionId,
+      );
+
+
+    if (
+      !player
+    ) {
+
+      return;
+    }
+
+
+    const event =
+      regionalEventAt(
+        Date.now(),
+      );
+
+
+    const expectedNpc =
+      REGION_BOARD_NPC[
+        event.region
+      ];
+
+
+    if (
+      String(
+        payload?.npc
+        ||
+        "",
+      )
+      !==
+      expectedNpc
+      ||
+      !this.regionalBoardNpcValid(
+        player,
+        event.region,
+      )
+    ) {
+
+      return;
+    }
+
+
+    const progress =
+      this.getRegionalProgress(
+        client.sessionId,
+      );
+
+
+    if (
+      progress.event.key !==
+      event.key
+      ||
+      progress.event.claimed
+      ||
+      progress.event.progress <
+      event.amount
+    ) {
+
+      return;
+    }
+
+
+    player.gold +=
+      event.reward.gold;
+
+
+    this.addXp(
+      player,
+      event.reward.xp,
+    );
+
+
+    progress.reputation[
+      event.region
+    ] =
+      Math.max(
+        0,
+
+        Number(
+          progress.reputation[
+            event.region
+          ],
+        )
+        ||
+        0,
+      )
+      +
+      event.reward.reputation;
+
+
+    progress.event.claimed =
+      true;
+
+
+    this.setRegionalProgress(
+      client.sessionId,
+      progress,
+    );
+
+
+    this.persist(
+      client.sessionId,
+      true,
+    );
+
+
+    client.send(
+      "toast",
+
+      {
+        text:
+          `Evento concluído · +${
+            event.reward.gold
+          } ouro · +${
+            event.reward.reputation
+          } reputação`,
+      },
+    );
+
+
+    this.sendRegionalProgressState(
+      client,
+    );
+
+
+    this.sendRegionalBoard(
+      client,
+
+      {
+        npc:
+          expectedNpc,
+      },
+    );
+  }
+
+
+  regionalContractEvent(
+    player,
+    type,
+    target,
+    amount,
+    client,
+  ) {
+
+    if (
+      !client
+      ||
+      amount <=
+      0
+    ) {
+
+      return;
+    }
+
+
+    const sessionId =
+      client.sessionId;
+
+
+    const now =
+      Date.now();
+
+
+    const today =
+      contractDayKey(
+        now,
+      );
+
+
+    const region =
+      getRegionAt(
+        player.x,
+        player.z,
+      );
+
+
+    const progress =
+      this.getRegionalProgress(
+        sessionId,
+      );
+
+
+    let changed =
+      false;
+
+
+    for (
+      const [
+        id,
+        state,
+      ]
+      of Object.entries(
+        progress.contracts,
+      )
+    ) {
+
+      const contract =
+        REGIONAL_CONTRACT_BY_ID[
+          id
+        ];
+
+
+      if (
+        !contract
+        ||
+        state.dayKey !==
+        today
+        ||
+        state.status !==
+        "active"
+        ||
+        contract.region !==
+        region
+        ||
+        contract.type !==
+        type
+        ||
+        contract.target !==
+        target
+      ) {
+
+        continue;
+      }
+
+
+      state.progress =
+        Math.min(
+          contract.amount,
+
+          state.progress
+          +
+          amount,
+        );
+
+
+      if (
+        state.progress >=
+        contract.amount
+      ) {
+
+        state.status =
+          "ready";
+
+
+        client.send(
+          "toast",
+
+          {
+            text:
+              `Contrato pronto: ${
+                contract.title
+              }`,
+          },
+        );
+      }
+
+
+      changed =
+        true;
+    }
+
+
+    const event =
+      regionalEventAt(
+        now,
+      );
+
+
+    if (
+      progress.event.key !==
+      event.key
+    ) {
+
+      progress.event = {
+
+        key:
+          event.key,
+
+        progress:
+          0,
+
+        claimed:
+          false,
+      };
+
+
+      changed =
+        true;
+    }
+
+
+    if (
+      type ===
+      "kill"
+      &&
+      target ===
+      event.target
+      &&
+      region ===
+      event.region
+      &&
+      !progress.event.claimed
+      &&
+      progress.event.progress <
+      event.amount
+    ) {
+
+      progress.event.progress =
+        Math.min(
+          event.amount,
+
+          progress.event.progress
+          +
+          amount,
+        );
+
+
+      changed =
+        true;
+
+
+      if (
+        progress.event.progress >=
+        event.amount
+      ) {
+
+        client.send(
+          "toast",
+
+          {
+            text:
+              `Evento pronto: ${
+                event.title
+              }`,
+          },
+        );
+      }
+    }
+
+
+    if (
+      changed
+    ) {
+
+      this.setRegionalProgress(
+        sessionId,
+        progress,
+      );
+
+
+      this.sendRegionalProgressState(
+        client,
+      );
+    }
+  }
+
+
   persist(
     sessionId,
     flush =
@@ -9031,7 +10067,7 @@ export class MyRoom
     ] = {
 
       saveVersion:
-        11,
+        13,
 
       name:
         player.name,
@@ -9091,6 +10127,11 @@ export class MyRoom
 
       landmarks:
         this.getPlayerLandmarks(
+          sessionId,
+        ),
+
+      regionalProgress:
+        this.getRegionalProgress(
           sessionId,
         ),
     };
