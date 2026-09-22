@@ -50,6 +50,41 @@ const EQUIPMENT_LABELS = {
 };
 
 
+
+/*
+ * ETAPA 11.3D SERVICES
+ */
+
+const OUTPOST_SERVICES = {
+
+  sunmeadow_outpost: {
+    type: "shop",
+    label: "Comércio do Prado",
+  },
+
+  forest_outpost: {
+    type: "chest",
+    label: "Baú do Refúgio",
+  },
+
+  marsh_outpost: {
+    type: "chest",
+    label: "Baú do Abrigo",
+  },
+
+  copper_outpost: {
+    type: "workbench",
+    label: "Bancada das Colinas",
+  },
+
+  silver_outpost: {
+    type: "furnace",
+    label: "Forno da Fronteira",
+  },
+
+};
+
+
 document.body.insertAdjacentHTML(
   "beforeend",
 
@@ -1408,6 +1443,78 @@ function discoveredRegions() {
   return parseStringList(
     localPlayer.discoveriesJson,
   );
+}
+
+
+
+function nearestOutpostService(
+  x,
+  z,
+  radius =
+    3.25,
+) {
+
+  let result =
+    null;
+
+
+  for (
+    const [
+      id,
+      service,
+    ]
+    of Object.entries(
+      OUTPOST_SERVICES,
+    )
+  ) {
+
+    const landmark =
+      LANDMARKS[
+        id
+      ];
+
+
+    if (
+      !landmark
+    ) {
+
+      continue;
+    }
+
+
+    const distance =
+      Math.hypot(
+        landmark.x -
+        x,
+
+        landmark.z -
+        z,
+      );
+
+
+    if (
+      distance <=
+      radius
+      &&
+      (
+        !result
+        ||
+        distance <
+        result.distance
+      )
+    ) {
+
+      result = {
+        id,
+        service,
+        landmark,
+        distance,
+      };
+    }
+  }
+
+
+  return result;
 }
 
 
@@ -7804,6 +7911,35 @@ function updateInteraction() {
 
     interaction.style.display =
       "block";
+
+    return;
+  }
+
+
+
+  const outpostService =
+    nearestOutpostService(
+      localPlayer.x,
+      localPlayer.z,
+      3.25,
+    );
+
+
+  if (
+    outpostService
+  ) {
+
+    interaction.textContent =
+      `[ E ] 🔧 ${
+        outpostService
+          .service
+          .label
+      }`;
+
+
+    interaction.style.display =
+      "block";
+
 
     return;
   }

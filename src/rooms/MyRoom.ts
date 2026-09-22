@@ -82,6 +82,41 @@ const EMPTY_INPUT = {
 };
 
 
+
+/*
+ * ETAPA 11.3D SERVICES
+ */
+
+const OUTPOST_SERVICES = {
+
+  sunmeadow_outpost: {
+    type: "shop",
+    label: "Comércio do Prado",
+  },
+
+  forest_outpost: {
+    type: "chest",
+    label: "Baú do Refúgio",
+  },
+
+  marsh_outpost: {
+    type: "chest",
+    label: "Baú do Abrigo",
+  },
+
+  copper_outpost: {
+    type: "workbench",
+    label: "Bancada das Colinas",
+  },
+
+  silver_outpost: {
+    type: "furnace",
+    label: "Forno da Fronteira",
+  },
+
+};
+
+
 function normalizeRarity(
   value,
 ) {
@@ -4447,6 +4482,78 @@ export class MyRoom
   }
 
 
+
+  findNearestOutpostService(
+    x,
+    z,
+    radius =
+      3.25,
+  ) {
+
+    let result =
+      null;
+
+
+    for (
+      const [
+        id,
+        service,
+      ]
+      of Object.entries(
+        OUTPOST_SERVICES,
+      )
+    ) {
+
+      const landmark =
+        LANDMARKS[
+          id
+        ];
+
+
+      if (
+        !landmark
+      ) {
+
+        continue;
+      }
+
+
+      const distance =
+        Math.hypot(
+          landmark.x -
+          x,
+
+          landmark.z -
+          z,
+        );
+
+
+      if (
+        distance <=
+        radius
+        &&
+        (
+          !result
+          ||
+          distance <
+          result.distance
+        )
+      ) {
+
+        result = {
+          id,
+          service,
+          landmark,
+          distance,
+        };
+      }
+    }
+
+
+    return result;
+  }
+
+
   professionLevel(
     player,
     profession,
@@ -4746,6 +4853,97 @@ export class MyRoom
 
 
       return;
+    }
+
+
+    /*
+     * SERVIÇOS DOS POSTOS
+     */
+
+    const outpostService =
+      this.findNearestOutpostService(
+        player.x,
+        player.z,
+        3.25,
+      );
+
+
+    if (
+      outpostService
+    ) {
+
+      console.log(
+        "[OUTPOST/SERVICE]",
+        player.name,
+        outpostService.id,
+        outpostService.service.type,
+      );
+
+
+      const type =
+        outpostService
+          .service
+          .type;
+
+
+      if (
+        type ===
+        "shop"
+      ) {
+
+        client.send(
+          "open-shop",
+          {
+            source:
+              outpostService.id,
+          },
+        );
+
+
+        return;
+      }
+
+
+      if (
+        type ===
+        "chest"
+      ) {
+
+        client.send(
+          "open-chest",
+          {
+            source:
+              outpostService.id,
+          },
+        );
+
+
+        return;
+      }
+
+
+      if (
+        type ===
+        "workbench"
+        ||
+        type ===
+        "furnace"
+      ) {
+
+        client.send(
+          "open-crafting",
+          {
+            station:
+              type,
+
+            source:
+              outpostService.id,
+          },
+        );
+
+
+        return;
+      }
     }
 
 
