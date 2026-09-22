@@ -1311,13 +1311,42 @@ export class MyRoom
           client,
         ),
 
+
+    /*
+     * 11.3A:
+     *
+     * Apenas testa comunicação cliente → servidor → cliente.
+     * NÃO teleporta o jogador.
+     */
+
+    "travel-probe":
+      (
+        client,
+        payload,
+      ) =>
+        this.travelProbe(
+          client,
+          payload,
+        ),
+
+
+    "travel-jump":
+      (
+        client,
+        payload,
+      ) =>
+        this.travelJump(
+          client,
+          payload,
+        ),
+
   };
 
 
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 11 v2:",
+      "🌎 Sandbox Online Etapa 11.3B:",
       this.roomId,
     );
 
@@ -4050,6 +4079,371 @@ export class MyRoom
         true,
       );
     }
+  }
+
+
+
+
+  travelJump(
+    client,
+    payload,
+  ) {
+
+    const player =
+      this.state.players.get(
+        client.sessionId,
+      );
+
+
+    if (
+      !player
+    ) {
+
+      client.send(
+        "travel-jump-result",
+
+        {
+          ok:
+            false,
+
+          reason:
+            "player-not-found",
+        },
+      );
+
+
+      return;
+    }
+
+
+    const target =
+      String(
+        payload?.target
+        ||
+        "",
+      );
+
+
+    /*
+     * Etapa 11.3B:
+     *
+     * apenas dois destinos.
+     * Sem mapa, sem serviço e sem sistema genérico ainda.
+     */
+
+    const destinations = {
+
+      village_waystone: {
+
+        label:
+          "Vila do Vale",
+
+        x:
+          0,
+
+        z:
+          1,
+      },
+
+
+      sunmeadow_outpost: {
+
+        label:
+          "Posto do Prado",
+
+        x:
+          3,
+
+        z:
+          -28,
+      },
+
+    };
+
+
+    const destination =
+      destinations[
+        target
+      ];
+
+
+    if (
+      !destination
+    ) {
+
+      client.send(
+        "travel-jump-result",
+
+        {
+          ok:
+            false,
+
+          reason:
+            "invalid-target",
+        },
+      );
+
+
+      return;
+    }
+
+
+    /*
+     * Vila sempre liberada.
+     *
+     * Posto do Prado precisa já ter sido descoberto.
+     */
+
+    if (
+      target ===
+      "sunmeadow_outpost"
+      &&
+      !this
+        .getPlayerLandmarks(
+          client.sessionId,
+        )
+        .includes(
+          "sunmeadow_outpost",
+        )
+    ) {
+
+      client.send(
+        "travel-jump-result",
+
+        {
+          ok:
+            false,
+
+          reason:
+            "locked",
+
+          label:
+            "Posto do Prado",
+        },
+      );
+
+
+      return;
+    }
+
+
+    console.log(
+      "[TRAVEL/JUMP] antes",
+      {
+        name:
+          player.name,
+
+        x:
+          player.x,
+
+        z:
+          player.z,
+
+        target,
+      },
+    );
+
+
+    player.x =
+      destination.x;
+
+
+    player.z =
+      destination.z;
+
+
+    player.moving =
+      false;
+
+
+    this.inputs.set(
+      client.sessionId,
+
+      {
+        ...EMPTY_INPUT,
+      },
+    );
+
+
+    /*
+     * Obriga atualização da região depois do salto.
+     */
+
+    this.playerRegions.delete(
+      client.sessionId,
+    );
+
+
+    this.updatePlayerRegion(
+      player,
+      client.sessionId,
+    );
+
+
+    this.updatePlayerLandmarks(
+      player,
+      client.sessionId,
+    );
+
+
+    this.persist(
+      client.sessionId,
+      true,
+    );
+
+
+    console.log(
+      "[TRAVEL/JUMP] depois",
+      {
+        name:
+          player.name,
+
+        x:
+          player.x,
+
+        z:
+          player.z,
+
+        target,
+      },
+    );
+
+
+    client.send(
+      "travel-jump-result",
+
+      {
+        ok:
+          true,
+
+        target,
+
+        label:
+          destination.label,
+
+        x:
+          destination.x,
+
+        z:
+          destination.z,
+      },
+    );
+  }
+
+
+  travelProbe(
+    client,
+    payload,
+  ) {
+
+    const player =
+      this.state.players.get(
+        client.sessionId,
+      );
+
+
+    if (
+      !player
+    ) {
+
+      console.warn(
+        "[TRAVEL/PROBE] jogador não encontrado",
+        client.sessionId,
+      );
+
+
+      client.send(
+        "travel-probe-ok",
+
+        {
+          ok:
+            false,
+
+          reason:
+            "player-not-found",
+        },
+      );
+
+
+      return;
+    }
+
+
+    const regionId =
+      getRegionAt(
+        player.x,
+        player.z,
+      );
+
+
+    const landmarks =
+      this.getPlayerLandmarks(
+        client.sessionId,
+      );
+
+
+    console.log(
+      "[TRAVEL/PROBE] OK",
+      {
+        sessionId:
+          client.sessionId,
+
+        name:
+          player.name,
+
+        region:
+          regionId,
+
+        x:
+          player.x,
+
+        z:
+          player.z,
+
+        landmarks:
+          landmarks.length,
+
+        source:
+          payload?.source
+          ||
+          "unknown",
+      },
+    );
+
+
+    client.send(
+      "travel-probe-ok",
+
+      {
+        ok:
+          true,
+
+        name:
+          player.name,
+
+        region:
+          regionId,
+
+        x:
+          Math.round(
+            player.x *
+            10,
+          )
+          /
+          10,
+
+        z:
+          Math.round(
+            player.z *
+            10,
+          )
+          /
+          10,
+
+        landmarks:
+          landmarks.length,
+      },
+    );
   }
 
 
@@ -7560,6 +7954,12 @@ export class MyRoom
     options,
   ) {
 
+    console.log(
+      "[JOIN] 1/5 - pedido recebido",
+      client.sessionId,
+    );
+
+
     const name =
       this.cleanName(
         options?.name,
@@ -7578,6 +7978,19 @@ export class MyRoom
       ]
       ||
       {};
+
+
+    console.log(
+      "[JOIN] 2/5 - perfil e save carregados",
+      {
+        sessionId:
+          client.sessionId,
+
+        profileId,
+
+        name,
+      },
+    );
 
 
     const inventory =
@@ -7721,9 +8134,26 @@ export class MyRoom
       );
 
 
+    console.log(
+      "[JOIN] 3/5 - Player criado",
+      {
+        sessionId:
+          client.sessionId,
+
+        name,
+      },
+    );
+
+
     this.state.players.set(
       client.sessionId,
       player,
+    );
+
+
+    console.log(
+      "[JOIN] 4/5 - Player registrado no estado",
+      client.sessionId,
     );
 
 
@@ -7773,6 +8203,22 @@ export class MyRoom
     this.persist(
       client.sessionId,
       true,
+    );
+
+
+    console.log(
+      "[JOIN] 5/5 - entrada concluída",
+      {
+        sessionId:
+          client.sessionId,
+
+        name,
+
+        landmarks:
+          this.getPlayerLandmarks(
+            client.sessionId,
+          ).length,
+      },
     );
 
 

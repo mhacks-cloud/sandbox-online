@@ -170,7 +170,7 @@ document.body.insertAdjacentHTML(
     <div class="controls">
       WASD/Setas mover · 1–5 hotbar · E interagir ·
       ESPAÇO atacar · F usar · I inventário ·
-      Q missões · P profissões · M regiões
+      Q missões · P profissões · M regiões · T teste · Y viajar
     </div>
 
   </div>
@@ -5787,6 +5787,17 @@ async function connect() {
 
   try {
 
+    console.log(
+      "[CLIENT/JOIN] 1/5 - tentando conectar",
+      {
+        origin:
+          location.origin,
+
+        name,
+      },
+    );
+
+
     room =
       await client.joinOrCreate(
         "my_room",
@@ -5802,6 +5813,18 @@ async function connect() {
       );
 
 
+    console.log(
+      "[CLIENT/JOIN] 2/5 - sala recebida",
+      {
+        roomId:
+          room.roomId,
+
+        sessionId:
+          room.sessionId,
+      },
+    );
+
+
     localSessionId =
       room.sessionId;
 
@@ -5810,6 +5833,11 @@ async function connect() {
       Callbacks.get(
         room,
       );
+
+
+    console.log(
+      "[CLIENT/JOIN] 3/5 - callbacks criados",
+    );
 
 
     callbacks.onAdd(
@@ -6354,6 +6382,104 @@ async function connect() {
 
 
 
+
+
+    room.onMessage(
+      "travel-jump-result",
+
+      (
+        message,
+      ) => {
+
+        console.log(
+          "[CLIENT/TRAVEL-JUMP]",
+          message,
+        );
+
+
+        if (
+          !message?.ok
+        ) {
+
+          if (
+            message?.reason ===
+            "locked"
+          ) {
+
+            showToast(
+              "🔒 Descubra primeiro o Posto do Prado.",
+            );
+          }
+
+          else {
+
+            showToast(
+              "❌ Viagem não concluída.",
+            );
+          }
+
+
+          return;
+        }
+
+
+        lastRegionHud =
+          "";
+
+
+        showToast(
+          `🌀 Chegamos: ${
+            message.label
+          }`,
+        );
+
+
+        renderRegionMap();
+
+        updateRegionHud();
+      },
+    );
+
+
+    room.onMessage(
+      "travel-probe-ok",
+
+      (
+        message,
+      ) => {
+
+        console.log(
+          "[CLIENT/TRAVEL-PROBE]",
+          message,
+        );
+
+
+        if (
+          !message?.ok
+        ) {
+
+          showToast(
+            "❌ Teste de viagem falhou.",
+          );
+
+
+          return;
+        }
+
+
+        showToast(
+          `🧪 Canal de viagem OK · ${
+            message.region
+          } · X ${
+            message.x
+          } / Z ${
+            message.z
+          }`,
+        );
+      },
+    );
+
+
     room.onMessage(
       "exploration-state",
 
@@ -6602,6 +6728,11 @@ async function connect() {
     );
 
 
+    console.log(
+      "[CLIENT/JOIN] 4/5 - listeners prontos",
+    );
+
+
     room.send(
       "request-exploration-state",
       {},
@@ -6614,6 +6745,11 @@ async function connect() {
 
     hud.style.display =
       "block";
+
+
+    console.log(
+      "[CLIENT/JOIN] 5/5 - HUD liberado",
+    );
   }
 
   catch (
@@ -6621,12 +6757,13 @@ async function connect() {
   ) {
 
     console.error(
+      "[CLIENT/JOIN] ERRO",
       error,
     );
 
 
     loginStatus.textContent =
-      "Erro ao conectar.";
+      "Erro ao conectar · veja F12 > Console.";
 
 
     playButton.disabled =
@@ -6857,6 +6994,113 @@ addEventListener(
       openModal(
         "professions",
       );
+
+
+      return;
+    }
+
+
+
+
+    if (
+      event.code ===
+      "KeyY"
+      &&
+      !event.repeat
+      &&
+      !activeModal
+    ) {
+
+      if (
+        !localPlayer
+      ) {
+
+        return;
+      }
+
+
+      const currentRegion =
+        getRegionAt(
+          localPlayer.x,
+          localPlayer.z,
+        );
+
+
+      /*
+       * Se estivermos na Vila:
+       *   Y → Posto do Prado.
+       *
+       * Em qualquer outra região:
+       *   Y → Vila.
+       */
+
+      const target =
+        currentRegion ===
+        "village"
+          ? "sunmeadow_outpost"
+          : "village_waystone";
+
+
+      console.log(
+        "[CLIENT/TRAVEL-JUMP] enviando",
+        {
+          currentRegion,
+          target,
+        },
+      );
+
+
+      room?.send(
+        "travel-jump",
+
+        {
+          target,
+        },
+      );
+
+
+      showToast(
+        "🌀 Preparando viagem...",
+      );
+
+
+      event.preventDefault();
+
+
+      return;
+    }
+
+
+    if (
+      event.code ===
+      "KeyT"
+      &&
+      !event.repeat
+      &&
+      !activeModal
+    ) {
+
+      console.log(
+        "[CLIENT/TRAVEL-PROBE] enviando...",
+      );
+
+
+      room?.send(
+        "travel-probe",
+
+        {
+          source:
+            "keyboard-T",
+        },
+      );
+
+
+      showToast(
+        "🧪 Testando canal de viagem...",
+      );
+
+
+      event.preventDefault();
 
 
       return;
