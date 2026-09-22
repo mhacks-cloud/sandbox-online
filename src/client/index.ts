@@ -38,6 +38,12 @@ import {
   NPC_NAMES,
 } from "../shared/gameData";
 
+import {
+  REGIONAL_NPCS,
+  regionalNpcPositionAt,
+  regionalMarketForSource,
+} from "../shared/regionalWorld";
+
 
 const EQUIPMENT_LABELS = {
 
@@ -84,127 +90,6 @@ const OUTPOST_SERVICES = {
 
 };
 
-
-
-/*
- * ETAPA 12.1 REGIONAL NPCS
- *
- * Espelho visual dos moradores regionais.
- * O servidor continua sendo a autoridade da interação.
- */
-
-const REGIONAL_NPCS = {
-
-  teo: {
-
-    name:
-      "Téo",
-
-    role:
-      "Mensageiro do Prado",
-
-    region:
-      "sunmeadow",
-
-    x:
-      7,
-
-    z:
-      -30,
-
-    visualKind:
-      "farmer",
-  },
-
-
-  runa: {
-
-    name:
-      "Runa",
-
-    role:
-      "Lenhadora do Bosque",
-
-    region:
-      "ancient_forest",
-
-    x:
-      -31,
-
-    z:
-      -8,
-
-    visualKind:
-      "hunter",
-  },
-
-
-  sena: {
-
-    name:
-      "Sena",
-
-    role:
-      "Herbalista da Névoa",
-
-    region:
-      "mist_marsh",
-
-    x:
-      -21,
-
-    z:
-      30,
-
-    visualKind:
-      "lina",
-  },
-
-
-  dario: {
-
-    name:
-      "Dario",
-
-    role:
-      "Mineiro das Colinas",
-
-    region:
-      "copper_highlands",
-
-    x:
-      31,
-
-    z:
-      23,
-
-    visualKind:
-      "blacksmith",
-  },
-
-
-  eira: {
-
-    name:
-      "Eira",
-
-    role:
-      "Sentinela da Fronteira",
-
-    region:
-      "silver_frontier",
-
-    x:
-      31,
-
-    z:
-      -28,
-
-    visualKind:
-      "fisherman",
-  },
-
-};
 
 
 document.body.insertAdjacentHTML(
@@ -337,55 +222,29 @@ document.body.insertAdjacentHTML(
     <button class="modal-close" data-close-modal>×</button>
 
     <div class="eyebrow">OTTO · COMERCIANTE</div>
-    <h2>Mercado da Vila</h2>
+
+    <h2>
+      Mercado da Vila
+    </h2>
 
     <div class="modal-section">
-      <strong>Comprar</strong>
 
-      <button data-buy="apple">
-        🍎 Maçã · 5 ouro
-      </button>
+      <strong>
+        Comprar
+      </strong>
 
-      <button data-buy="bandage">
-        🩹 Bandagem · 10 ouro
-      </button>
+      <div id="shop-buy-list"></div>
 
-      <button data-buy="wheat_seed">
-        🌱 Semente de Trigo · 2 ouro
-      </button>
-
-      <button data-buy="carrot_seed">
-        🌱 Semente de Cenoura · 3 ouro
-      </button>
-
-      <button data-buy="tomato_seed">
-        🍅 Semente de Tomate · 6 ouro · Agricultor Nv.5
-      </button>
-
-      <button data-buy="pumpkin_seed">
-        🎃 Semente de Abóbora · 10 ouro · Agricultor Nv.10
-      </button>
     </div>
 
     <div class="modal-section">
-      <strong>Vender recursos e produtos</strong>
 
-      <button data-sell="wood">🪵 Madeira</button>
-      <button data-sell="stone">🪨 Pedra</button>
-      <button data-sell="fiber">🌿 Fibra</button>
-      <button data-sell="iron_ore">⛏ Minério</button>
-      <button data-sell="wheat">🌾 Trigo</button>
-      <button data-sell="carrot">🥕 Cenoura</button>
-      <button data-sell="river_fish">🐟 Peixe</button>
-      <button data-sell="bass">🐠 Robalo</button>
-      <button data-sell="trout">🐟 Truta</button>
-      <button data-sell="golden_carp">🐟 Carpa Dourada</button>
-      <button data-sell="copper_ore">🟠 Minério de Cobre</button>
-      <button data-sell="silver_ore">⚪ Minério de Prata</button>
-      <button data-sell="hardwood">🪵 Madeira Nobre</button>
-      <button data-sell="tomato">🍅 Tomate</button>
-      <button data-sell="pumpkin">🎃 Abóbora</button>
-      <button data-sell="all">🪙 Vender tudo negociável</button>
+      <strong>
+        Vender
+      </strong>
+
+      <div id="shop-sell-list"></div>
+
     </div>
   </div>
 
@@ -449,6 +308,15 @@ document.body.insertAdjacentHTML(
         class="profession-info"
       >
       </div>
+
+      <button
+        id="regional-dialog-market"
+        class="quest-action"
+        type="button"
+        style="margin-top:12px"
+      >
+        🪙 NEGOCIAR
+      </button>
 
     </div>
   </div>
@@ -1408,6 +1276,13 @@ const shopHeading =
     );
 
 
+const shopBuyList =
+  $("#shop-buy-list");
+
+const shopSellList =
+  $("#shop-sell-list");
+
+
 const craftPanel =
   $("#craft-panel");
 
@@ -1453,6 +1328,9 @@ const regionalDialogText =
 
 const regionalDialogTip =
   $("#regional-dialog-tip");
+
+const regionalDialogMarketButton =
+  $("#regional-dialog-market");
 
 
 const questPanel =
@@ -1730,11 +1608,15 @@ function nearestRegionalNpc(
   x,
   z,
   radius =
-    2.4,
+    2.6,
 ) {
 
   let result =
     null;
+
+
+  const now =
+    Date.now();
 
 
   for (
@@ -1747,12 +1629,27 @@ function nearestRegionalNpc(
     )
   ) {
 
+    const position =
+      regionalNpcPositionAt(
+        id,
+        now,
+      );
+
+
+    if (
+      !position
+    ) {
+
+      continue;
+    }
+
+
     const distance =
       Math.hypot(
-        npc.x -
+        position.x -
         x,
 
-        npc.z -
+        position.z -
         z,
       );
 
@@ -1774,6 +1671,12 @@ function nearestRegionalNpc(
         id,
 
         npc,
+
+        x:
+          position.x,
+
+        z:
+          position.z,
 
         distance,
       };
@@ -3274,27 +3177,101 @@ function buildLandmarkVisuals() {
 
 
 
+/*
+ * ============================================================
+ * ETAPA 12 — NPCs REGIONAIS VIVOS
+ * ============================================================
+ *
+ * Esta Map precisa existir antes de buildWorld() ser executado.
+ */
+
+const regionalNpcVisuals =
+  new Map();
+
+
 function buildRegionalNpcVisuals() {
 
   for (
-    const npc
-    of Object.values(
+    const [
+      id,
+      npc,
+    ]
+    of Object.entries(
       REGIONAL_NPCS,
     )
   ) {
 
-    addSpriteObject(
-      npc.visualKind,
+    const group =
+      new THREE.Group();
 
+
+    group.add(
+      shadow(
+        .55,
+      ),
+    );
+
+
+    group.add(
+      makeSprite(
+        simpleTexture(
+          npc.visualKind,
+        ),
+
+        2.2,
+
+        3,
+      ),
+    );
+
+
+    group.position.set(
+      npc.x,
+      0,
+      npc.z,
+    );
+
+
+    scene.add(
+      group,
+    );
+
+
+    const label =
+      document.createElement(
+        "div",
+      );
+
+
+    label.className =
+      "world-label npc";
+
+
+    label.textContent =
       `${
         npc.name
       } · ${
         npc.role
-      }`,
+      }`;
 
-      npc.x,
 
-      npc.z,
+    document.body.appendChild(
+      label,
+    );
+
+
+    regionalNpcVisuals.set(
+      id,
+
+      {
+        id,
+
+        npc,
+
+        group,
+
+        label,
+      },
     );
   }
 }
@@ -4239,6 +4216,12 @@ let activeCraftStation =
 
 let activeQuestNpc =
   "journal";
+
+let activeRegionalNpc =
+  "";
+
+let activeShopSource =
+  "";
 
 let toastTimer;
 
@@ -6346,50 +6329,400 @@ $("#inventory-close")
     };
 
 
-document
-  .querySelectorAll(
-    "[data-buy]",
-  )
-  .forEach(
-    (
+function villageShopData() {
+
+  const buy =
+    {};
+
+
+  const sell =
+    {};
+
+
+  for (
+    const [
+      id,
+      item,
+    ]
+    of Object.entries(
+      ITEM_CATALOG,
+    )
+  ) {
+
+    if (
+      item.buy
+    ) {
+
+      buy[
+        id
+      ] =
+        item.buy;
+    }
+
+
+    if (
+      item.sell
+    ) {
+
+      sell[
+        id
+      ] =
+        item.sell;
+    }
+  }
+
+
+  return {
+
+    buy,
+
+    sell,
+  };
+}
+
+
+function renderShopMarket(
+  source =
+    "",
+) {
+
+  activeShopSource =
+    String(
+      source
+      ||
+      "",
+    );
+
+
+  const regional =
+    regionalMarketForSource(
+      activeShopSource,
+    );
+
+
+  const identity =
+    serviceIdentity(
+      activeShopSource,
+    );
+
+
+  let data;
+
+
+  if (
+    regional
+  ) {
+
+    data =
+      regional;
+
+
+    if (
+      identity
+    ) {
+
+      shopEyebrow.textContent =
+        identity
+          .landmarkLabel
+          .toUpperCase();
+
+
+      shopHeading.textContent =
+        identity
+          .serviceLabel;
+    }
+
+    else {
+
+      shopEyebrow.textContent =
+        regional.eyebrow;
+
+
+      shopHeading.textContent =
+        regional.label;
+    }
+  }
+
+  else {
+
+    data =
+      villageShopData();
+
+
+    shopEyebrow.textContent =
+      "OTTO · COMERCIANTE";
+
+
+    shopHeading.textContent =
+      "Mercado da Vila";
+  }
+
+
+  shopBuyList.innerHTML =
+    "";
+
+
+  shopSellList.innerHTML =
+    "";
+
+
+  for (
+    const [
+      id,
+      price,
+    ]
+    of Object.entries(
+      data.buy
+      ||
+      {},
+    )
+  ) {
+
+    const item =
+      ITEM_CATALOG[
+        id
+      ];
+
+
+    if (
+      !item
+    ) {
+
+      continue;
+    }
+
+
+    const button =
+      document.createElement(
+        "button",
+      );
+
+
+    button.className =
+      "quest-action";
+
+
+    let reqText =
+      "";
+
+
+    if (
+      item.buyReq
+    ) {
+
+      const current =
+        clientProfessionLevel(
+          item
+            .buyReq
+            .profession,
+        );
+
+
+      if (
+        current <
+        item
+          .buyReq
+          .level
+      ) {
+
+        button.disabled =
+          true;
+
+
+        reqText =
+          ` · requer ${
+            PROFESSION_NAMES[
+              item
+                .buyReq
+                .profession
+            ]
+            ||
+            item
+              .buyReq
+              .profession
+          } Nv.${
+            item
+              .buyReq
+              .level
+          }`;
+      }
+    }
+
+
+    button.textContent =
+      `${
+        item.icon
+        ||
+        "📦"
+      } ${
+        item.label
+      } · ${
+        price
+      } ouro${
+        reqText
+      }`;
+
+
+    button.onclick =
+      () => {
+
+        room?.send(
+          "buy",
+
+          {
+            kind:
+              id,
+
+            source:
+              activeShopSource,
+          },
+        );
+      };
+
+
+    shopBuyList.appendChild(
       button,
-    ) => {
-
-      button.onclick =
-        () =>
-          room?.send(
-            "buy",
-
-            {
-              kind:
-                button.dataset.buy,
-            },
-          );
-    },
-  );
+    );
+  }
 
 
-document
-  .querySelectorAll(
-    "[data-sell]",
-  )
-  .forEach(
-    (
+  if (
+    !shopBuyList.children.length
+  ) {
+
+    shopBuyList.textContent =
+      "Nenhum item disponível.";
+  }
+
+
+  for (
+    const [
+      id,
+      price,
+    ]
+    of Object.entries(
+      data.sell
+      ||
+      {},
+    )
+  ) {
+
+    const item =
+      ITEM_CATALOG[
+        id
+      ];
+
+
+    if (
+      !item
+    ) {
+
+      continue;
+    }
+
+
+    const button =
+      document.createElement(
+        "button",
+      );
+
+
+    button.className =
+      "quest-action";
+
+
+    button.textContent =
+      `${
+        item.icon
+        ||
+        "📦"
+      } ${
+        item.label
+      } · ${
+        price
+      } ouro cada`;
+
+
+    button.onclick =
+      () => {
+
+        room?.send(
+          "sell",
+
+          {
+            kind:
+              id,
+
+            source:
+              activeShopSource,
+          },
+        );
+      };
+
+
+    shopSellList.appendChild(
       button,
-    ) => {
+    );
+  }
 
-      button.onclick =
-        () =>
-          room?.send(
-            "sell",
 
-            {
-              kind:
-                button.dataset.sell,
-            },
-          );
-    },
+  const sellAll =
+    document.createElement(
+      "button",
+    );
+
+
+  sellAll.className =
+    "quest-action";
+
+
+  sellAll.textContent =
+    "🪙 Vender tudo aceito aqui";
+
+
+  sellAll.onclick =
+    () => {
+
+      room?.send(
+        "sell",
+
+        {
+          kind:
+            "all",
+
+          source:
+            activeShopSource,
+        },
+      );
+    };
+
+
+  shopSellList.appendChild(
+    sellAll,
   );
+}
+
+
+regionalDialogMarketButton.onclick =
+  () => {
+
+    if (
+      !activeRegionalNpc
+    ) {
+
+      return;
+    }
+
+
+    room?.send(
+      "regional-shop",
+
+      {
+        npc:
+          activeRegionalNpc,
+      },
+    );
+  };
 
 
 function showToast(
@@ -7348,56 +7681,11 @@ async function connect() {
         message,
       ) => {
 
-        const identity =
-          serviceIdentity(
-            message?.source,
-          );
-
-
-        if (
-          identity
-        ) {
-
-          if (
-            shopEyebrow
-          ) {
-
-            shopEyebrow.textContent =
-              identity
-                .landmarkLabel
-                .toUpperCase();
-          }
-
-
-          if (
-            shopHeading
-          ) {
-
-            shopHeading.textContent =
-              identity
-                .serviceLabel;
-          }
-        }
-
-        else {
-
-          if (
-            shopEyebrow
-          ) {
-
-            shopEyebrow.textContent =
-              "OTTO · COMERCIANTE";
-          }
-
-
-          if (
-            shopHeading
-          ) {
-
-            shopHeading.textContent =
-              "Mercado da Vila";
-          }
-        }
+        renderShopMarket(
+          message?.source
+          ||
+          "",
+        );
 
 
         openModal(
@@ -7517,6 +7805,14 @@ async function connect() {
         message,
       ) => {
 
+        activeRegionalNpc =
+          String(
+            message?.id
+            ||
+            "",
+          );
+
+
         const region =
           REGIONS[
             message?.region
@@ -7554,6 +7850,31 @@ async function connect() {
                 message.tip
               }`
             : "";
+
+
+        const market =
+          regionalMarketForSource(
+            activeRegionalNpc,
+          );
+
+
+        regionalDialogMarketButton.style.display =
+          market
+            ? "block"
+            : "none";
+
+
+        if (
+          market
+        ) {
+
+          regionalDialogMarketButton.textContent =
+            `🪙 NEGOCIAR COM ${
+              message?.name
+              ||
+              "MORADOR"
+            }`;
+        }
 
 
         openModal(
@@ -8819,6 +9140,44 @@ function projectLabel(
 }
 
 
+function updateRegionalNpcVisuals() {
+
+  const now =
+    Date.now();
+
+
+  for (
+    const [
+      id,
+      visual,
+    ]
+    of regionalNpcVisuals
+  ) {
+
+    const position =
+      regionalNpcPositionAt(
+        id,
+        now,
+      );
+
+
+    if (
+      !position
+    ) {
+
+      continue;
+    }
+
+
+    visual.group.position.set(
+      position.x,
+      0,
+      position.z,
+    );
+  }
+}
+
+
 function updateLabels() {
 
   for (
@@ -8913,6 +9272,27 @@ function updateLabels() {
 
 
   for (
+    const visual
+    of regionalNpcVisuals.values()
+  ) {
+
+    const position =
+      visual.group.position
+        .clone();
+
+
+    position.y +=
+      3.25;
+
+
+    projectLabel(
+      visual.label,
+      position,
+    );
+  }
+
+
+  for (
     const marker
     of staticLabels
   ) {
@@ -8946,6 +9326,9 @@ function animate() {
 
   const elapsed =
     clock.getElapsedTime();
+
+
+  updateRegionalNpcVisuals();
 
 
   for (

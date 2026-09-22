@@ -54,6 +54,13 @@ import {
 } from "../shared/gameData";
 
 import {
+  REGIONAL_NPCS,
+  OUTPOST_MARKET_SOURCE,
+  regionalNpcPositionAt,
+  regionalMarketForSource,
+} from "../shared/regionalWorld";
+
+import {
   loadWorldSave,
   saveWorldSave,
   snapshotFarmPlots,
@@ -116,143 +123,6 @@ const OUTPOST_SERVICES = {
 
 };
 
-
-
-/*
- * ETAPA 12.1 REGIONAL NPCS
- *
- * Moradores dos postos regionais.
- *
- * Não fazem parte do Schema nem do save.
- */
-
-const REGIONAL_NPCS = {
-
-  teo: {
-
-    name:
-      "Téo",
-
-    role:
-      "Mensageiro do Prado",
-
-    region:
-      "sunmeadow",
-
-    x:
-      7,
-
-    z:
-      -30,
-
-    text:
-      "Levo recados entre a Vila do Vale e os viajantes do Prado. Os campos parecem tranquilos, mas quem se afasta demais da estrada encontra problemas.",
-
-    tip:
-      "O Posto do Prado é um bom ponto de apoio antes de explorar o sul.",
-  },
-
-
-  runa: {
-
-    name:
-      "Runa",
-
-    role:
-      "Lenhadora do Bosque",
-
-    region:
-      "ancient_forest",
-
-    x:
-      -31,
-
-    z:
-      -8,
-
-    text:
-      "O Bosque Antigo dá madeira melhor que a encontrada perto da vila, mas as árvores mais velhas não cedem para qualquer ferramenta.",
-
-    tip:
-      "Prepare ferramentas melhores antes de avançar para o interior do bosque.",
-  },
-
-
-  sena: {
-
-    name:
-      "Sena",
-
-    role:
-      "Herbalista da Névoa",
-
-    region:
-      "mist_marsh",
-
-    x:
-      -21,
-
-    z:
-      30,
-
-    text:
-      "A névoa muda rápido por aqui. Quem segue apenas os olhos acaba entrando fundo demais no pântano.",
-
-    tip:
-      "Use o Abrigo da Névoa como referência e fique atento às criaturas do pântano.",
-  },
-
-
-  dario: {
-
-    name:
-      "Dario",
-
-    role:
-      "Mineiro das Colinas",
-
-    region:
-      "copper_highlands",
-
-    x:
-      31,
-
-    z:
-      23,
-
-    text:
-      "As Colinas de Cobre ainda têm bons veios de minério. O problema é que todo mundo que sabe disso quer uma parte.",
-
-    tip:
-      "Minério de cobre e inimigos mais perigosos aparecem nesta região.",
-  },
-
-
-  eira: {
-
-    name:
-      "Eira",
-
-    role:
-      "Sentinela da Fronteira",
-
-    region:
-      "silver_frontier",
-
-    x:
-      31,
-
-    z:
-      -28,
-
-    text:
-      "Daqui para frente as estradas ficam silenciosas. Os espectros não fazem barulho até já estarem perto demais.",
-
-    tip:
-      "A Fronteira Prateada é uma região avançada. Venha preparado antes de explorar longe do posto.",
-  },
-
-};
 
 
 function normalizeRarity(
@@ -1476,6 +1346,17 @@ export class MyRoom
         ),
 
 
+    "regional-shop":
+      (
+        client,
+        payload,
+      ) =>
+        this.openRegionalShop(
+          client,
+          payload,
+        ),
+
+
     "request-exploration-state":
       (
         client,
@@ -1519,7 +1400,7 @@ export class MyRoom
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 11.3B:",
+      "🌎 Sandbox Online Etapa 12:",
       this.roomId,
     );
 
@@ -4626,11 +4507,15 @@ export class MyRoom
     x,
     z,
     radius =
-      2.4,
+      2.6,
   ) {
 
     let result =
       null;
+
+
+    const now =
+      Date.now();
 
 
     for (
@@ -4643,12 +4528,27 @@ export class MyRoom
       )
     ) {
 
+      const position =
+        regionalNpcPositionAt(
+          id,
+          now,
+        );
+
+
+      if (
+        !position
+      ) {
+
+        continue;
+      }
+
+
       const distance =
         Math.hypot(
-          npc.x -
+          position.x -
           x,
 
-          npc.z -
+          position.z -
           z,
         );
 
@@ -4670,6 +4570,12 @@ export class MyRoom
           id,
 
           npc,
+
+          x:
+            position.x,
+
+          z:
+            position.z,
 
           distance,
         };
@@ -6830,6 +6736,210 @@ export class MyRoom
   }
 
 
+  openRegionalShop(
+    client,
+    payload,
+  ) {
+
+    const player =
+      this.state.players.get(
+        client.sessionId,
+      );
+
+
+    if (
+      !player
+    ) {
+
+      return;
+    }
+
+
+    const requested =
+      String(
+        payload?.npc
+        ||
+        "",
+      );
+
+
+    const market =
+      regionalMarketForSource(
+        requested,
+      );
+
+
+    if (
+      !market
+    ) {
+
+      return;
+    }
+
+
+    const nearest =
+      this.findNearestRegionalNpc(
+        player.x,
+        player.z,
+        3.2,
+      );
+
+
+    if (
+      !nearest
+      ||
+      nearest.id !==
+      requested
+    ) {
+
+      return;
+    }
+
+
+    client.send(
+      "open-shop",
+
+      {
+        source:
+          requested,
+      },
+    );
+  }
+
+
+  resolveShopContext(
+    player,
+    rawSource,
+  ) {
+
+    const source =
+      String(
+        rawSource
+        ||
+        "",
+      );
+
+
+    const regionalMarket =
+      regionalMarketForSource(
+        source,
+      );
+
+
+    if (
+      regionalMarket
+    ) {
+
+      /*
+       * Comércio físico do Posto do Prado.
+       */
+
+      if (
+        OUTPOST_MARKET_SOURCE[
+          source
+        ]
+      ) {
+
+        const landmark =
+          LANDMARKS[
+            source
+          ];
+
+
+        if (
+          !landmark
+          ||
+          Math.hypot(
+            player.x -
+            landmark.x,
+
+            player.z -
+            landmark.z,
+          )
+          >
+          3.8
+        ) {
+
+          return null;
+        }
+      }
+
+      /*
+       * Comércio diretamente com o NPC.
+       */
+
+      else {
+
+        const position =
+          regionalNpcPositionAt(
+            source,
+            Date.now(),
+          );
+
+
+        if (
+          !position
+          ||
+          Math.hypot(
+            player.x -
+            position.x,
+
+            player.z -
+            position.z,
+          )
+          >
+          3.3
+        ) {
+
+          return null;
+        }
+      }
+
+
+      return {
+
+        regional:
+          true,
+
+        source,
+
+        market:
+          regionalMarket,
+      };
+    }
+
+
+    /*
+     * Mercado original da Vila.
+     */
+
+    if (
+      this.distance(
+        player,
+        LOCATIONS.merchant,
+      )
+      >
+      3.5
+    ) {
+
+      return null;
+    }
+
+
+    return {
+
+      regional:
+        false,
+
+      source:
+        "",
+
+      market:
+        null,
+    };
+  }
+
+
   sell(
     client,
     payload,
@@ -6843,13 +6953,21 @@ export class MyRoom
 
     if (
       !player
-      ||
-      this.distance(
+    ) {
+
+      return;
+    }
+
+
+    const context =
+      this.resolveShopContext(
         player,
-        LOCATIONS.merchant,
-      )
-      >
-      3.5
+        payload?.source,
+      );
+
+
+    if (
+      !context
     ) {
 
       return;
@@ -6874,20 +6992,55 @@ export class MyRoom
       0;
 
 
+    const priceFor =
+      (
+        id,
+      ) => {
+
+        if (
+          context.regional
+        ) {
+
+          return Number(
+            context
+              .market
+              .sell?.[
+                id
+              ],
+          )
+          ||
+          0;
+        }
+
+
+        return Number(
+          ITEM_CATALOG[
+            id
+          ]?.sell,
+        )
+        ||
+        0;
+      };
+
+
     const sellOneType =
       (
         id,
       ) => {
 
-        const definition =
-          ITEM_CATALOG[
-            id
-          ];
+        const price =
+          priceFor(
+            id,
+          );
 
 
         if (
-          !definition?.sell
-        ) return;
+          price <=
+          0
+        ) {
+
+          return;
+        }
 
 
         const amount =
@@ -6900,7 +7053,10 @@ export class MyRoom
         if (
           amount <=
           0
-        ) return;
+        ) {
+
+          return;
+        }
 
 
         removeItem(
@@ -6912,7 +7068,7 @@ export class MyRoom
 
         earned +=
           amount *
-          definition.sell;
+          price;
       };
 
 
@@ -6921,23 +7077,47 @@ export class MyRoom
       "all"
     ) {
 
-      for (
-        const [
-          id,
-          definition,
-        ]
-        of Object.entries(
-          ITEM_CATALOG,
-        )
+      if (
+        context.regional
       ) {
 
-        if (
-          definition.sell
+        for (
+          const id
+          of Object.keys(
+            context
+              .market
+              .sell
+            ||
+            {},
+          )
         ) {
 
           sellOneType(
             id,
           );
+        }
+      }
+
+      else {
+
+        for (
+          const [
+            id,
+            definition,
+          ]
+          of Object.entries(
+            ITEM_CATALOG,
+          )
+        ) {
+
+          if (
+            definition.sell
+          ) {
+
+            sellOneType(
+              id,
+            );
+          }
         }
       }
     }
@@ -6954,6 +7134,16 @@ export class MyRoom
       earned <=
       0
     ) {
+
+      client.send(
+        "toast",
+
+        {
+          text:
+            "Nada para vender aqui.",
+        },
+      );
+
 
       return;
     }
@@ -6973,6 +7163,16 @@ export class MyRoom
       client.sessionId,
       true,
     );
+
+
+    client.send(
+      "toast",
+
+      {
+        text:
+          `Venda concluída · +${earned} ouro`,
+      },
+    );
   }
 
 
@@ -6990,13 +7190,21 @@ export class MyRoom
 
     if (
       !player
-      ||
-      this.distance(
+    ) {
+
+      return;
+    }
+
+
+    const context =
+      this.resolveShopContext(
         player,
-        LOCATIONS.merchant,
-      )
-      >
-      3.5
+        payload?.source,
+      );
+
+
+    if (
+      !context
     ) {
 
       return;
@@ -7018,7 +7226,47 @@ export class MyRoom
 
 
     if (
-      !definition?.buy
+      !definition
+    ) {
+
+      return;
+    }
+
+
+    let price =
+      0;
+
+
+    if (
+      context.regional
+    ) {
+
+      price =
+        Number(
+          context
+            .market
+            .buy?.[
+              id
+            ],
+        )
+        ||
+        0;
+    }
+
+    else {
+
+      price =
+        Number(
+          definition.buy,
+        )
+        ||
+        0;
+    }
+
+
+    if (
+      price <=
+      0
     ) {
 
       return;
@@ -7032,23 +7280,32 @@ export class MyRoom
       const currentLevel =
         this.professionLevel(
           player,
-          definition.buyReq.profession,
+          definition
+            .buyReq
+            .profession,
         );
 
 
       if (
         currentLevel <
-        definition.buyReq.level
+        definition
+          .buyReq
+          .level
       ) {
 
         client.send(
           "toast",
+
           {
             text:
               `Requer ${
-                definition.buyReq.profession
+                definition
+                  .buyReq
+                  .profession
               } Nv.${
-                definition.buyReq.level
+                definition
+                  .buyReq
+                  .level
               }.`,
           },
         );
@@ -7061,11 +7318,12 @@ export class MyRoom
 
     if (
       player.gold <
-      definition.buy
+      price
     ) {
 
       client.send(
         "toast",
+
         {
           text:
             "Ouro insuficiente.",
@@ -7095,6 +7353,7 @@ export class MyRoom
 
       client.send(
         "toast",
+
         {
           text:
             "Inventário cheio.",
@@ -7107,7 +7366,7 @@ export class MyRoom
 
 
     player.gold -=
-      definition.buy;
+      price;
 
 
     this.setInventory(
@@ -7120,7 +7379,21 @@ export class MyRoom
       client.sessionId,
       true,
     );
+
+
+    client.send(
+      "toast",
+
+      {
+        text:
+          `Comprado: ${
+            definition.label
+          } · ${price} ouro`,
+      },
+    );
   }
+
+
 
   inventoryMove(
     client,
