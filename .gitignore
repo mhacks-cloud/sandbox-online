@@ -10,3 +10,5 @@ backups/
 
 data/players.json
 data/world.json
+data/world.tmp.json
+data/world.corrupt-*.json

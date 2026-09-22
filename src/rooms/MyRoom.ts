@@ -45,6 +45,12 @@ import {
   QUESTS,
 } from "../shared/gameData";
 
+import {
+  loadWorldSave,
+  saveWorldSave,
+  snapshotFarmPlots,
+} from "./worldPersistence";
+
 
 const DATA_DIR =
   join(
@@ -1097,6 +1103,10 @@ export class MyRoom
     loadSaves();
 
 
+  worldSave =
+    loadWorldSave();
+
+
   dropCounter =
     0;
 
@@ -1290,6 +1300,12 @@ export class MyRoom
 
     this.createFarmPlots();
 
+    this.restoreWorld();
+
+    this.saveWorld(
+      "startup",
+    );
+
 
     this.setTimestep(
       (
@@ -1447,6 +1463,224 @@ export class MyRoom
             readyAt: 0,
           },
         ),
+      );
+    }
+  }
+
+
+  restoreWorld() {
+
+    const savedPlots =
+      this.worldSave?.farmPlots
+      ||
+      {};
+
+
+    const validCrops =
+      new Set(
+        Object.values(
+          CROPS,
+        )
+          .map(
+            (
+              crop,
+            ) =>
+              crop.crop,
+          ),
+      );
+
+
+    let restored =
+      0;
+
+
+    let ignored =
+      0;
+
+
+    this.state.farmPlots.forEach(
+      (
+        plot,
+        id,
+      ) => {
+
+        const saved =
+          savedPlots[
+            id
+          ];
+
+
+        if (
+          !saved
+          ||
+          !saved.crop
+        ) {
+
+          return;
+        }
+
+
+        const crop =
+          String(
+            saved.crop,
+          );
+
+
+        if (
+          !validCrops.has(
+            crop,
+          )
+        ) {
+
+          ignored++;
+
+          return;
+        }
+
+
+        const plantedAt =
+          Math.max(
+            0,
+
+            Number(
+              saved.plantedAt,
+            )
+            ||
+            0,
+          );
+
+
+        const readyAt =
+          Math.max(
+            0,
+
+            Number(
+              saved.readyAt,
+            )
+            ||
+            0,
+          );
+
+
+        if (
+          plantedAt <=
+          0
+          ||
+          readyAt <=
+          0
+          ||
+          readyAt <
+          plantedAt
+        ) {
+
+          ignored++;
+
+          return;
+        }
+
+
+        plot.crop =
+          crop;
+
+
+        plot.plantedAt =
+          plantedAt;
+
+
+        plot.readyAt =
+          readyAt;
+
+
+        restored++;
+      },
+    );
+
+
+    /*
+     * Calculamos o estágio com Date.now().
+     *
+     * Isso significa que o crescimento continua
+     * mesmo enquanto o servidor estiver desligado.
+     */
+
+    this.updateFarmPlots(
+      Date.now(),
+    );
+
+
+    console.log(
+      `🌱 Mundo restaurado · ${restored} plantações`
+      +
+      (
+        ignored
+          ? ` · ${ignored} entradas ignoradas`
+          : ""
+      ),
+    );
+  }
+
+
+  saveWorld(
+    reason =
+      "manual",
+  ) {
+
+    try {
+
+      this.worldSave = {
+
+        version:
+          1,
+
+        savedAt:
+          Date.now(),
+
+        farmPlots:
+          snapshotFarmPlots(
+            this.state.farmPlots,
+          ),
+      };
+
+
+      this.worldSave =
+        saveWorldSave(
+          this.worldSave,
+        );
+
+
+      if (
+        reason !==
+        "autosave"
+      ) {
+
+        const active =
+          Object.values(
+            this.worldSave.farmPlots,
+          )
+            .filter(
+              (
+                plot,
+              ) =>
+                Boolean(
+                  plot.crop,
+                ),
+            )
+            .length;
+
+
+        console.log(
+          `💾 Mundo salvo [${reason}] · ${active} plantações ativas`,
+        );
+      }
+    }
+
+    catch (
+      error
+    ) {
+
+      console.error(
+        "❌ Erro salvando o mundo:",
+        error,
       );
     }
   }
@@ -2235,6 +2469,10 @@ export class MyRoom
 
 
       this.saveAll();
+
+      this.saveWorld(
+        "autosave",
+      );
     }
   }
 
@@ -3926,6 +4164,16 @@ export class MyRoom
         "any_crop",
         1,
         client,
+      );
+
+
+      this.saveWorld(
+        "harvest",
+      );
+
+
+      this.saveWorld(
+        "plant",
       );
 
 
@@ -6654,5 +6902,9 @@ export class MyRoom
   onDispose() {
 
     this.saveAll();
+
+    this.saveWorld(
+      "dispose",
+    );
   }
 }

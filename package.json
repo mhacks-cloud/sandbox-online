@@ -14,7 +14,11 @@
     "clean": "rimraf dist",
     "test": "mocha -r tsx test/**.test.ts --exit --timeout 15000",
     "dev": "vite",
-    "build:client": "vite build --mode client"
+    "build:client": "vite build --mode client",
+    "validate": "npx tsc --noEmit && npm run build",
+    "save:report": "node scripts/save-report.mjs",
+    "backup": "bash scripts/project-backup.sh",
+    "git:sync": "bash scripts/git-sync.sh"
   },
   "author": "",
   "license": "UNLICENSED",
