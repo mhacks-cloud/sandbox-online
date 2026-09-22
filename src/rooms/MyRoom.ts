@@ -30,6 +30,9 @@ import {
   HOTBAR_SIZE,
   EQUIPMENT_SLOTS,
   PROFESSION_IDS,
+  WORLD_BOUNDS,
+  REGIONS,
+  getRegionAt,
   LOCATIONS,
   RARITIES,
   TOOL_TIERS,
@@ -1110,6 +1113,10 @@ export class MyRoom
     loadWorldSave();
 
 
+  playerRegions =
+    new Map();
+
+
   dropCounter =
     0;
 
@@ -1288,7 +1295,7 @@ export class MyRoom
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 9:",
+      "🌎 Sandbox Online Etapa 10:",
       this.roomId,
     );
 
@@ -2387,9 +2394,9 @@ export class MyRoom
 
           player.x =
             Math.max(
-              -31,
+              -WORLD_BOUNDS,
               Math.min(
-                31,
+                WORLD_BOUNDS,
 
                 player.x
                 +
@@ -2402,9 +2409,9 @@ export class MyRoom
 
           player.z =
             Math.max(
-              -31,
+              -WORLD_BOUNDS,
               Math.min(
-                31,
+                WORLD_BOUNDS,
 
                 player.z
                 +
@@ -2421,6 +2428,12 @@ export class MyRoom
               input.screenY,
             );
         }
+
+
+        this.updatePlayerRegion(
+          player,
+          sessionId,
+        );
       },
     );
 
@@ -3448,6 +3461,276 @@ export class MyRoom
       );
   }
 
+
+
+
+  getDiscoveries(
+    player,
+  ) {
+
+    const raw =
+      parseArray(
+        player.discoveriesJson,
+      );
+
+
+    const result = [];
+
+
+    for (
+      const value
+      of raw
+    ) {
+
+      const id =
+        String(
+          value
+          ||
+          "",
+        );
+
+
+      if (
+        REGIONS[
+          id
+        ]
+        &&
+        !result.includes(
+          id,
+        )
+      ) {
+
+        result.push(
+          id,
+        );
+      }
+    }
+
+
+    return result;
+  }
+
+
+  setDiscoveries(
+    player,
+    discoveries,
+  ) {
+
+    const result = [];
+
+
+    for (
+      const value
+      of discoveries
+      ||
+      []
+    ) {
+
+      const id =
+        String(
+          value
+          ||
+          "",
+        );
+
+
+      if (
+        REGIONS[
+          id
+        ]
+        &&
+        !result.includes(
+          id,
+        )
+      ) {
+
+        result.push(
+          id,
+        );
+      }
+    }
+
+
+    player.discoveriesJson =
+      JSON.stringify(
+        result,
+      );
+  }
+
+
+  updatePlayerRegion(
+    player,
+    sessionId,
+  ) {
+
+    const regionId =
+      getRegionAt(
+        player.x,
+        player.z,
+      );
+
+
+    const previous =
+      this.playerRegions.get(
+        sessionId,
+      );
+
+
+    if (
+      previous ===
+      regionId
+    ) {
+
+      return;
+    }
+
+
+    this.playerRegions.set(
+      sessionId,
+      regionId,
+    );
+
+
+    const region =
+      REGIONS[
+        regionId
+      ];
+
+
+    if (
+      !region
+    ) {
+
+      return;
+    }
+
+
+    const discoveries =
+      this.getDiscoveries(
+        player,
+      );
+
+
+    if (
+      discoveries.includes(
+        regionId,
+      )
+    ) {
+
+      return;
+    }
+
+
+    discoveries.push(
+      regionId,
+    );
+
+
+    this.setDiscoveries(
+      player,
+      discoveries,
+    );
+
+
+    const xp =
+      Math.max(
+        0,
+
+        Number(
+          region.discoveryXp,
+        )
+        ||
+        0,
+      );
+
+
+    const gold =
+      Math.max(
+        0,
+
+        Number(
+          region.discoveryGold,
+        )
+        ||
+        0,
+      );
+
+
+    if (
+      xp >
+      0
+    ) {
+
+      this.addXp(
+        player,
+        xp,
+      );
+    }
+
+
+    if (
+      gold >
+      0
+    ) {
+
+      player.gold +=
+        gold;
+    }
+
+
+    const client =
+      this.clients.find(
+        (
+          candidate,
+        ) =>
+          candidate.sessionId ===
+          sessionId,
+      );
+
+
+    this.questEvent(
+      player,
+      "discover",
+      regionId,
+      1,
+      client,
+    );
+
+
+    this.persist(
+      sessionId,
+      true,
+    );
+
+
+    client?.send(
+      "region-discovered",
+
+      {
+        id:
+          regionId,
+
+        label:
+          region.label,
+
+        xp,
+
+        gold,
+
+        recommendedLevel:
+          region.recommendedLevel,
+      },
+    );
+
+
+    console.log(
+      `🧭 ${
+        player.name
+      } descobriu ${
+        region.label
+      }`,
+    );
+  }
 
 
   professionLevel(
@@ -6279,8 +6562,43 @@ export class MyRoom
             }
 
 
+            if (
+              objective.type ===
+              "discover"
+            ) {
+
+              return this
+                .getDiscoveries(
+                  player,
+                )
+                .includes(
+                  objective.target,
+                )
+                  ? objective.amount
+                  : 0;
+            }
+
+
             return 0;
           },
+        );
+
+
+      const ready =
+        quest.objectives.every(
+          (
+            objective,
+            index,
+          ) =>
+            (
+              progress[
+                index
+              ]
+              ||
+              0
+            )
+            >=
+            objective.amount,
         );
 
 
@@ -6289,7 +6607,9 @@ export class MyRoom
       ] = {
 
         status:
-          "active",
+          ready
+            ? "ready"
+            : "active",
 
         progress,
       };
@@ -7051,6 +7371,15 @@ export class MyRoom
             JSON.stringify(
               professions,
             ),
+
+          discoveriesJson:
+            JSON.stringify(
+              Array.isArray(
+                save.discoveries,
+              )
+                ? save.discoveries
+                : [],
+            ),
         },
       );
 
@@ -7134,6 +7463,11 @@ export class MyRoom
     );
 
 
+    this.playerRegions.delete(
+      client.sessionId,
+    );
+
+
     this.state.players.delete(
       client.sessionId,
     );
@@ -7170,7 +7504,7 @@ export class MyRoom
     ] = {
 
       saveVersion:
-        9,
+        10,
 
       name:
         player.name,
@@ -7220,6 +7554,11 @@ export class MyRoom
 
       professions:
         this.getProfessions(
+          player,
+        ),
+
+      discoveries:
+        this.getDiscoveries(
           player,
         ),
     };

@@ -16,6 +16,10 @@ import {
   PROFESSION_IDS,
   PROFESSION_NAMES,
   PROFESSION_UNLOCKS,
+  WORLD_BOUNDS,
+  REGION_ORDER,
+  REGIONS,
+  getRegionAt,
   LOCATIONS,
   RARITIES,
   TOOL_TIERS,
@@ -98,6 +102,15 @@ document.body.insertAdjacentHTML(
       🪙 <strong id="gold-count">0</strong>
     </div>
 
+    <div
+      id="region-badge"
+      class="panel region-badge"
+    >
+      🧭
+      <strong>Vila do Vale</strong>
+      <small>Recomendado Nv.1</small>
+    </div>
+
     <div class="panel quest-tracker">
       <div class="eyebrow">MISSÕES · Q</div>
       <div id="quest-tracker-list">Nenhuma missão ativa.</div>
@@ -155,7 +168,7 @@ document.body.insertAdjacentHTML(
     <div class="controls">
       WASD/Setas mover · 1–5 hotbar · E interagir ·
       ESPAÇO atacar · F usar · I inventário ·
-      Q missões · P profissões
+      Q missões · P profissões · M regiões
     </div>
 
   </div>
@@ -261,6 +274,30 @@ document.body.insertAdjacentHTML(
     <h2>Habilidades de Vida</h2>
 
     <div id="profession-list"></div>
+  </div>
+
+
+  <div
+    id="region-map-panel"
+    class="panel modal interactive"
+  >
+    <button
+      class="modal-close"
+      data-close-modal
+    >
+      ×
+    </button>
+
+    <div class="eyebrow">
+      MUNDO · M
+    </div>
+
+    <h2>
+      Regiões Conhecidas
+    </h2>
+
+    <div id="region-map-summary"></div>
+    <div id="region-map-list"></div>
   </div>
 
 
@@ -896,6 +933,70 @@ button {
   font-size: 9px;
 }
 
+
+.region-badge {
+  position: absolute;
+  right: 16px;
+  top: 104px;
+  min-width: 190px;
+  padding: 8px 10px;
+  text-align: right;
+}
+
+.region-badge strong {
+  display: block;
+  color: #dfc374;
+  font-size: 10px;
+}
+
+.region-badge small {
+  display: block;
+  margin-top: 2px;
+  color: #aebbb1;
+  font-size: 8px;
+}
+
+#region-map-summary {
+  margin: 8px 0 12px;
+  color: #b6c2b8;
+  font-size: 9px;
+}
+
+.region-map-card {
+  margin-top: 8px;
+  padding: 10px;
+  border: 2px solid #344a40;
+  background: #15201b;
+}
+
+.region-map-card.current {
+  border-color: #d1aa52;
+}
+
+.region-map-card.locked {
+  opacity: .45;
+}
+
+.region-map-card h3 {
+  margin: 0 0 5px;
+  color: #ead8aa;
+  font-size: 12px;
+}
+
+.region-map-card p {
+  margin: 4px 0;
+  color: #aebbb1;
+  font-size: 9px;
+}
+
+.region-map-activities {
+  margin-top: 7px;
+  color: #d0bd83;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+
 #toast {
   position: fixed;
   z-index: 300;
@@ -970,6 +1071,9 @@ const onlineCount =
 const goldCount =
   $("#gold-count");
 
+const regionBadge =
+  $("#region-badge");
+
 const questTrackerList =
   $("#quest-tracker-list");
 
@@ -1023,6 +1127,15 @@ const professionPanel =
 
 const professionList =
   $("#profession-list");
+
+const regionMapPanel =
+  $("#region-map-panel");
+
+const regionMapSummary =
+  $("#region-map-summary");
+
+const regionMapList =
+  $("#region-map-list");
 
 const toast =
   $("#toast");
@@ -1122,6 +1235,79 @@ function parseObject(
 
     return {};
   }
+}
+
+
+
+function parseStringList(
+  json,
+) {
+
+  try {
+
+    const value =
+      JSON.parse(
+        json
+        ||
+        "[]",
+      );
+
+
+    if (
+      Array.isArray(
+        value,
+      )
+    ) {
+
+      return value
+        .map(
+          (
+            item,
+          ) =>
+            String(
+              item,
+            ),
+        )
+        .filter(
+          (
+            item,
+            index,
+            list,
+          ) =>
+            REGIONS[
+              item
+            ]
+            &&
+            list.indexOf(
+              item,
+            )
+            ===
+            index,
+        );
+    }
+  }
+
+  catch {
+  }
+
+
+  return [];
+}
+
+
+function discoveredRegions() {
+
+  if (
+    !localPlayer
+  ) {
+
+    return [];
+  }
+
+
+  return parseStringList(
+    localPlayer.discoveriesJson,
+  );
 }
 
 
@@ -1607,6 +1793,87 @@ function simpleTexture(
 
         ctx.fillStyle = "#70466a";
         ctx.fillRect(12,31,25,20);
+      }
+
+
+      else if (
+        kind ===
+        "boar"
+      ) {
+
+        ctx.fillStyle = "#644634";
+        ctx.fillRect(8,29,33,17);
+        ctx.fillRect(28,23,14,15);
+
+        ctx.fillStyle = "#d7c3a2";
+        ctx.fillRect(39,34,5,3);
+
+        ctx.fillStyle = "#2a201b";
+        ctx.fillRect(33,28,3,3);
+      }
+
+
+      else if (
+        kind ===
+        "swamp_spider"
+      ) {
+
+        ctx.fillStyle = "#2d4635";
+        ctx.fillRect(17,25,17,17);
+        ctx.fillRect(20,18,12,12);
+
+        ctx.fillRect(6,28,12,3);
+        ctx.fillRect(31,28,12,3);
+
+        ctx.fillRect(7,38,12,3);
+        ctx.fillRect(31,38,12,3);
+
+        ctx.fillStyle = "#d7c55e";
+        ctx.fillRect(21,27,3,3);
+        ctx.fillRect(28,27,3,3);
+      }
+
+
+      else if (
+        kind ===
+        "bandit"
+      ) {
+
+        ctx.fillStyle = "#d1a078";
+        ctx.fillRect(18,13,15,14);
+
+        ctx.fillStyle = "#5d3030";
+        ctx.fillRect(14,27,24,28);
+
+        ctx.fillStyle = "#2c2827";
+        ctx.fillRect(16,8,20,8);
+
+        ctx.fillStyle = "#c2c2c2";
+        ctx.fillRect(38,31,3,22);
+      }
+
+
+      else if (
+        kind ===
+        "wraith"
+      ) {
+
+        ctx.fillStyle =
+          "rgba(194,214,221,.85)";
+
+        ctx.fillRect(17,12,17,16);
+        ctx.fillRect(13,27,25,23);
+
+        ctx.fillStyle = "#627684";
+
+        ctx.fillRect(10,46,8,8);
+        ctx.fillRect(22,47,8,9);
+        ctx.fillRect(33,45,7,10);
+
+        ctx.fillStyle = "#24313a";
+
+        ctx.fillRect(21,19,3,3);
+        ctx.fillRect(29,19,3,3);
       }
 
 
@@ -2128,6 +2395,98 @@ function addAdvancedFishingSpots() {
 }
 
 
+
+function buildRegionVisuals() {
+
+  for (
+    const id
+    of REGION_ORDER
+  ) {
+
+    const region =
+      REGIONS[
+        id
+      ];
+
+
+    const width =
+      region.bounds.maxX -
+      region.bounds.minX;
+
+
+    const depth =
+      region.bounds.maxZ -
+      region.bounds.minZ;
+
+
+    const centerX =
+      (
+        region.bounds.minX
+        +
+        region.bounds.maxX
+      )
+      /
+      2;
+
+
+    const centerZ =
+      (
+        region.bounds.minZ
+        +
+        region.bounds.maxZ
+      )
+      /
+      2;
+
+
+    const plane =
+      new THREE.Mesh(
+
+        new THREE.PlaneGeometry(
+          width,
+          depth,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              region.color,
+
+            transparent:
+              true,
+
+            opacity:
+              id ===
+              "village"
+                ? .06
+                : .17,
+
+            depthWrite:
+              false,
+          },
+        ),
+      );
+
+
+    plane.rotation.x =
+      -Math.PI /
+      2;
+
+
+    plane.position.set(
+      centerX,
+      .006,
+      centerZ,
+    );
+
+
+    scene.add(
+      plane,
+    );
+  }
+}
+
+
 function buildWorld() {
 
   const grass =
@@ -2161,8 +2520,8 @@ function buildWorld() {
 
 
   grass.repeat.set(
-    35,
-    35,
+    55,
+    55,
   );
 
 
@@ -2170,8 +2529,8 @@ function buildWorld() {
     new THREE.Mesh(
 
       new THREE.PlaneGeometry(
-        70,
-        70,
+        110,
+        110,
       ),
 
       new THREE.MeshBasicMaterial(
@@ -2440,31 +2799,49 @@ function buildWorld() {
 
 
   addLabel(
-    "Prado dos Slimes · Nv.1",
-    19,
-    -20,
+    "Prado do Sul · Nv.1+",
+    0,
+    -34,
     .7,
   );
 
 
   addLabel(
-    "Bosque dos Lobos · Nv.2",
-    -22,
-    16,
+    "Bosque Antigo · Nv.4+",
+    -35,
+    -12,
     .7,
   );
 
 
   addLabel(
-    "Acampamento Goblin · Nv.3",
-    24,
-    11,
+    "Pântano da Névoa · Nv.5+",
+    -18,
+    34,
+    .7,
+  );
+
+
+  addLabel(
+    "Colinas de Cobre · Nv.6+",
+    35,
+    25,
+    .7,
+  );
+
+
+  addLabel(
+    "Fronteira Prateada · Nv.9+",
+    35,
+    -32,
     .7,
   );
 }
 
 
 buildWorld();
+
+buildRegionVisuals();
 
 addAdvancedFishingSpots();
 
@@ -4273,6 +4650,215 @@ function renderProfessions() {
   }
 }
 
+
+let lastRegionHud =
+  "";
+
+
+function updateRegionHud() {
+
+  if (
+    !localPlayer
+    ||
+    !regionBadge
+  ) {
+
+    return;
+  }
+
+
+  const id =
+    getRegionAt(
+      localPlayer.x,
+      localPlayer.z,
+    );
+
+
+  if (
+    id ===
+    lastRegionHud
+  ) {
+
+    return;
+  }
+
+
+  lastRegionHud =
+    id;
+
+
+  const region =
+    REGIONS[
+      id
+    ];
+
+
+  if (
+    !region
+  ) {
+
+    return;
+  }
+
+
+  regionBadge.innerHTML =
+    `
+      🧭
+
+      <strong>
+        ${region.label}
+      </strong>
+
+      <small>
+        Recomendado Nv.${region.recommendedLevel}
+      </small>
+    `;
+}
+
+
+function renderRegionMap() {
+
+  if (
+    !regionMapList
+  ) {
+
+    return;
+  }
+
+
+  const known =
+    new Set(
+      discoveredRegions(),
+    );
+
+
+  const current =
+    localPlayer
+      ? getRegionAt(
+          localPlayer.x,
+          localPlayer.z,
+        )
+      : "village";
+
+
+  regionMapSummary.textContent =
+    `${
+      known.size
+    } / ${
+      REGION_ORDER.length
+    } regiões descobertas`;
+
+
+  regionMapList.innerHTML =
+    "";
+
+
+  for (
+    const id
+    of REGION_ORDER
+  ) {
+
+    const region =
+      REGIONS[
+        id
+      ];
+
+
+    const discovered =
+      known.has(
+        id,
+      );
+
+
+    const card =
+      document.createElement(
+        "div",
+      );
+
+
+    card.className =
+      "region-map-card";
+
+
+    if (
+      current ===
+      id
+    ) {
+
+      card.classList.add(
+        "current",
+      );
+    }
+
+
+    if (
+      !discovered
+    ) {
+
+      card.classList.add(
+        "locked",
+      );
+    }
+
+
+    if (
+      discovered
+    ) {
+
+      card.innerHTML =
+        `
+          <h3>
+            ${
+              current ===
+              id
+                ? "📍"
+                : "✅"
+            }
+
+            ${region.label}
+          </h3>
+
+          <p>
+            ${region.subtitle}
+          </p>
+
+          <p>
+            Recomendado:
+            Nv.${region.recommendedLevel}
+          </p>
+
+          <div class="region-map-activities">
+            ${
+              region.activities.join(
+                " · ",
+              )
+            }
+          </div>
+        `;
+    }
+
+    else {
+
+      card.innerHTML =
+        `
+          <h3>
+            🔒 Região desconhecida
+          </h3>
+
+          <p>
+            Explore o mundo para revelar esta área.
+          </p>
+        `;
+    }
+
+
+    regionMapList.appendChild(
+      card,
+    );
+  }
+}
+
+
 function updateHud() {
 
   if (
@@ -4361,6 +4947,10 @@ function closeModals() {
 
   professionPanel.style.display =
     "none";
+
+
+  regionMapPanel.style.display =
+    "none";
 }
 
 
@@ -4381,6 +4971,7 @@ function openModal(
     chest: chestPanel,
     quests: questPanel,
     professions: professionPanel,
+    regions: regionMapPanel,
   };
 
 
@@ -4856,6 +5447,7 @@ async function connect() {
               "equipmentJson",
               "questsJson",
               "professionsJson",
+              "discoveriesJson",
             ]
           ) {
 
@@ -4872,6 +5464,8 @@ async function connect() {
                 renderQuestTracker();
 
                 renderProfessions();
+
+                renderRegionMap();
 
                 updateHud();
 
@@ -4908,6 +5502,10 @@ async function connect() {
           renderQuestTracker();
 
           renderProfessions();
+
+          renderRegionMap();
+
+          updateRegionHud();
         }
 
 
@@ -5269,6 +5867,36 @@ async function connect() {
           ||
           "",
         ),
+    );
+
+
+
+    room.onMessage(
+      "region-discovered",
+
+      (
+        message,
+      ) => {
+
+        showToast(
+          `🧭 Nova região: ${
+            message?.label
+            ||
+            "desconhecida"
+          } · +${
+            message?.xp
+            ||
+            0
+          } XP · +${
+            message?.gold
+            ||
+            0
+          } ouro`,
+        );
+
+
+        renderRegionMap();
+      },
     );
 
 
@@ -5638,6 +6266,25 @@ addEventListener(
 
       openModal(
         "professions",
+      );
+
+
+      return;
+    }
+
+
+    if (
+      event.code ===
+      "KeyM"
+      &&
+      !event.repeat
+    ) {
+
+      renderRegionMap();
+
+
+      openModal(
+        "regions",
       );
 
 
@@ -6622,6 +7269,8 @@ function animate() {
     );
   }
 
+
+  updateRegionHud();
 
   updateInteraction();
 

@@ -62,6 +62,9 @@ export const Player = schema(
 
     professionsJson:
       t.string().default("{}"),
+
+    discoveriesJson:
+      t.string().default("[]"),
   },
 
   "Player",

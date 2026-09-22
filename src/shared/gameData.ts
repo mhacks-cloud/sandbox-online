@@ -83,6 +83,210 @@ export const PROFESSION_UNLOCKS = {
 };
 
 
+
+export const WORLD_BOUNDS =
+  52;
+
+
+export const REGION_ORDER = [
+  "village",
+  "sunmeadow",
+  "ancient_forest",
+  "mist_marsh",
+  "copper_highlands",
+  "silver_frontier",
+];
+
+
+export const REGIONS = {
+
+  village: {
+    label: "Vila do Vale",
+    subtitle: "Centro seguro e área inicial",
+    recommendedLevel: 1,
+    color: 0x6f9b58,
+
+    bounds: {
+      minX: -18,
+      maxX: 18,
+      minZ: -18,
+      maxZ: 18,
+    },
+
+    discoveryXp: 0,
+    discoveryGold: 0,
+
+    activities: [
+      "Comércio",
+      "Fazenda",
+      "Crafting",
+      "Lago da Vila",
+    ],
+  },
+
+
+  sunmeadow: {
+    label: "Prado do Sul",
+    subtitle: "Campos abertos e criaturas iniciantes",
+    recommendedLevel: 1,
+    color: 0x8baa55,
+
+    bounds: {
+      minX: -18,
+      maxX: 18,
+      minZ: -52,
+      maxZ: -18,
+    },
+
+    discoveryXp: 20,
+    discoveryGold: 5,
+
+    activities: [
+      "Slimes",
+      "Árvores",
+      "Arbustos",
+      "Ferro",
+    ],
+  },
+
+
+  ancient_forest: {
+    label: "Bosque Antigo",
+    subtitle: "Floresta densa rica em Madeira Nobre",
+    recommendedLevel: 4,
+    color: 0x416b45,
+
+    bounds: {
+      minX: -52,
+      maxX: -18,
+      minZ: -52,
+      maxZ: 18,
+    },
+
+    discoveryXp: 45,
+    discoveryGold: 12,
+
+    activities: [
+      "Lobos",
+      "Javalis",
+      "Madeira Nobre",
+      "Ferro",
+    ],
+  },
+
+
+  mist_marsh: {
+    label: "Pântano da Névoa",
+    subtitle: "Terras úmidas e ervas raras",
+    recommendedLevel: 5,
+    color: 0x537b68,
+
+    bounds: {
+      minX: -52,
+      maxX: 18,
+      minZ: 18,
+      maxZ: 52,
+    },
+
+    discoveryXp: 60,
+    discoveryGold: 18,
+
+    activities: [
+      "Aranhas",
+      "Ervas Medicinais",
+      "Lago Profundo",
+      "Trutas",
+    ],
+  },
+
+
+  copper_highlands: {
+    label: "Colinas de Cobre",
+    subtitle: "Terreno elevado ocupado por saqueadores",
+    recommendedLevel: 6,
+    color: 0x9b7748,
+
+    bounds: {
+      minX: 18,
+      maxX: 52,
+      minZ: 0,
+      maxZ: 52,
+    },
+
+    discoveryXp: 75,
+    discoveryGold: 24,
+
+    activities: [
+      "Cobre",
+      "Goblins",
+      "Saqueadores",
+      "Mineração avançada",
+    ],
+  },
+
+
+  silver_frontier: {
+    label: "Fronteira Prateada",
+    subtitle: "Região perigosa para aventureiros experientes",
+    recommendedLevel: 9,
+    color: 0x66788a,
+
+    bounds: {
+      minX: 18,
+      maxX: 52,
+      minZ: -52,
+      maxZ: 0,
+    },
+
+    discoveryXp: 130,
+    discoveryGold: 45,
+
+    activities: [
+      "Prata",
+      "Espectros",
+      "Lago Prateado",
+      "Carpa Dourada",
+    ],
+  },
+
+};
+
+
+export function getRegionAt(
+  x,
+  z,
+) {
+
+  for (
+    const id
+    of REGION_ORDER
+  ) {
+
+    const region =
+      REGIONS[
+        id
+      ];
+
+
+    if (
+      x >= region.bounds.minX
+      &&
+      x <= region.bounds.maxX
+      &&
+      z >= region.bounds.minZ
+      &&
+      z <= region.bounds.maxZ
+    ) {
+
+      return id;
+    }
+  }
+
+
+  return "village";
+}
+
+
 export const LOCATIONS = {
 
   merchant: { x: 6, z: -5 },
@@ -322,6 +526,7 @@ export const RESOURCE_TYPES = {
  * Pontos de pesca.
  */
 
+
 export const FISHING_SPOTS = {
 
   village_lake: {
@@ -337,10 +542,11 @@ export const FISHING_SPOTS = {
     ],
   },
 
+
   deep_lake: {
     label: "Lago Profundo",
-    x: -23,
-    z: 23,
+    x: -30,
+    z: 34,
     reqLevel: 5,
     minRodTier: 2,
 
@@ -350,10 +556,11 @@ export const FISHING_SPOTS = {
     ],
   },
 
+
   silver_lake: {
     label: "Lago Prateado",
-    x: 24,
-    z: -23,
+    x: 34,
+    z: -34,
     reqLevel: 10,
     minRodTier: 3,
 
@@ -1312,62 +1519,114 @@ export const KITCHEN_RECIPES = {
 };
 
 
+
 export const RESOURCE_LAYOUT = [
+
+  /*
+   * VILA / PRADO
+   */
 
   ["tree_01", "tree", -16, -14],
   ["tree_02", "tree", -12, -17],
-  ["tree_03", "tree", -19, -7],
-  ["tree_04", "tree", -18, 9],
-  ["tree_05", "tree", -12, 15],
-  ["tree_06", "tree", -5, 18],
-  ["tree_07", "tree", 5, 18],
-  ["tree_08", "tree", 15, 15],
-  ["tree_09", "tree", 20, 8],
-  ["tree_10", "tree", 21, -4],
-  ["tree_11", "tree", 17, -15],
-  ["tree_12", "tree", -4, -19],
 
-  ["hard_tree_01", "hard_tree", -27, -22],
-  ["hard_tree_02", "hard_tree", -24, -26],
-  ["hard_tree_03", "hard_tree", -29, -12],
-  ["hard_tree_04", "hard_tree", -26, 20],
-
+  ["tree_03", "tree", -8, -25],
+  ["tree_04", "tree", 6, -28],
+  ["tree_05", "tree", 13, -34],
+  ["tree_06", "tree", -6, -40],
+  ["tree_07", "tree", 8, -45],
+  ["tree_08", "tree", 16, -23],
 
   ["rock_01", "rock", -9, 8],
   ["rock_02", "rock", -14, 2],
   ["rock_03", "rock", 7, 9],
   ["rock_04", "rock", 15, 5],
-  ["rock_05", "rock", 11, -11],
-  ["rock_06", "rock", -8, -11],
-  ["rock_07", "rock", 19, -8],
-  ["rock_08", "rock", -20, -14],
 
+  ["rock_05", "rock", -4, -27],
+  ["rock_06", "rock", 10, -37],
 
-  ["ore_01", "ore", -22, 6],
-  ["ore_02", "ore", -18, 18],
-  ["ore_03", "ore", 21, 15],
-  ["ore_04", "ore", 24, -12],
-  ["ore_05", "ore", -14, -20],
-
-  ["copper_01", "copper_ore", 27, 20],
-  ["copper_02", "copper_ore", 28, 15],
-  ["copper_03", "copper_ore", -27, -7],
-
-  ["silver_01", "silver_ore", 27, -27],
-  ["silver_02", "silver_ore", 22, -29],
-  ["silver_03", "silver_ore", -28, 27],
-
+  ["ore_01", "ore", -15, -30],
+  ["ore_02", "ore", 13, -29],
+  ["ore_03", "ore", -5, -46],
+  ["ore_04", "ore", 14, -45],
 
   ["bush_01", "bush", -6, 7],
   ["bush_02", "bush", -12, 5],
   ["bush_03", "bush", 5, 12],
   ["bush_04", "bush", 13, -4],
-  ["bush_05", "bush", -15, -4],
-  ["bush_06", "bush", 4, -15],
 
-  ["herb_01", "herb_bush", -26, 24],
-  ["herb_02", "herb_bush", -23, 20],
-  ["herb_03", "herb_bush", 26, -18],
+  ["bush_05", "bush", -8, -31],
+  ["bush_06", "bush", 5, -39],
+
+
+  /*
+   * BOSQUE ANTIGO
+   */
+
+  ["hard_tree_01", "hard_tree", -27, -8],
+  ["hard_tree_02", "hard_tree", -34, -15],
+  ["hard_tree_03", "hard_tree", -42, -7],
+  ["hard_tree_04", "hard_tree", -47, -22],
+  ["hard_tree_05", "hard_tree", -31, -31],
+  ["hard_tree_06", "hard_tree", -44, -38],
+  ["hard_tree_07", "hard_tree", -25, 8],
+
+  ["forest_ore_01", "ore", -29, -19],
+  ["forest_ore_02", "ore", -39, -28],
+
+  ["forest_rock_01", "rock", -46, -10],
+  ["forest_rock_02", "rock", -28, -40],
+
+
+  /*
+   * PÂNTANO DA NÉVOA
+   */
+
+  ["herb_01", "herb_bush", -24, 25],
+  ["herb_02", "herb_bush", -32, 31],
+  ["herb_03", "herb_bush", -41, 38],
+  ["herb_04", "herb_bush", -18, 43],
+  ["herb_05", "herb_bush", 4, 34],
+  ["herb_06", "herb_bush", -45, 47],
+
+  ["marsh_bush_01", "bush", -12, 28],
+  ["marsh_bush_02", "bush", -38, 45],
+
+  ["marsh_tree_01", "tree", 8, 42],
+  ["marsh_tree_02", "tree", -10, 48],
+
+
+  /*
+   * COLINAS DE COBRE
+   */
+
+  ["copper_01", "copper_ore", 26, 13],
+  ["copper_02", "copper_ore", 33, 20],
+  ["copper_03", "copper_ore", 43, 15],
+  ["copper_04", "copper_ore", 47, 29],
+  ["copper_05", "copper_ore", 30, 41],
+  ["copper_06", "copper_ore", 44, 46],
+
+  ["high_rock_01", "rock", 25, 27],
+  ["high_rock_02", "rock", 39, 35],
+
+  ["high_ore_01", "ore", 49, 8],
+
+
+  /*
+   * FRONTEIRA PRATEADA
+   */
+
+  ["silver_01", "silver_ore", 26, -20],
+  ["silver_02", "silver_ore", 34, -27],
+  ["silver_03", "silver_ore", 43, -21],
+  ["silver_04", "silver_ore", 48, -34],
+  ["silver_05", "silver_ore", 29, -43],
+  ["silver_06", "silver_ore", 44, -48],
+
+  ["frontier_rock_01", "rock", 23, -36],
+  ["frontier_rock_02", "rock", 39, -44],
+
+  ["frontier_ore_01", "ore", 49, -14],
 
 ];
 
@@ -1426,6 +1685,7 @@ export const CROPS = {
 };
 
 
+
 export const ENEMY_TYPES = {
 
   slime: {
@@ -1454,15 +1714,15 @@ export const ENEMY_TYPES = {
 
   wolf: {
     label: "Lobo",
-    level: 2,
-    hp: 32,
+    level: 3,
+    hp: 42,
     speed: 2.5,
-    attack: 7,
+    attack: 8,
     aggro: 8,
     range: 1.35,
     attackCooldown: 1200,
-    xp: 15,
-    gold: 2,
+    xp: 20,
+    gold: 3,
     respawn: 12000,
 
     loot: [
@@ -1477,47 +1737,191 @@ export const ENEMY_TYPES = {
   },
 
 
-  goblin: {
-    label: "Goblin",
-    level: 3,
-    hp: 45,
-    speed: 2,
-    attack: 9,
-    aggro: 9,
-    range: 1.45,
-    attackCooldown: 1100,
-    xp: 24,
-    gold: 4,
+  boar: {
+    label: "Javali Selvagem",
+    level: 4,
+    hp: 58,
+    speed: 2.35,
+    attack: 10,
+    aggro: 7,
+    range: 1.5,
+    attackCooldown: 1250,
+    xp: 32,
+    gold: 5,
     respawn: 15000,
 
     loot: [
-      ["iron_ore", 1, .75],
-      ["stone", 2, .45],
+      ["fiber", 2, .70],
+      ["berry", 2, .35],
     ],
 
     equipment: [
-      ["stone_sword", .15],
-      ["iron_sword", .04],
+      ["explorer_vest", .04],
+    ],
+  },
+
+
+  swamp_spider: {
+    label: "Aranha do Pântano",
+    level: 5,
+    hp: 70,
+    speed: 2.2,
+    attack: 12,
+    aggro: 8,
+    range: 1.45,
+    attackCooldown: 1100,
+    xp: 40,
+    gold: 7,
+    respawn: 16000,
+
+    loot: [
+      ["herb", 2, .65],
+      ["fiber", 2, .55],
+    ],
+
+    equipment: [
+      ["explorer_hood", .06],
+    ],
+  },
+
+
+  goblin: {
+    label: "Goblin",
+    level: 5,
+    hp: 68,
+    speed: 2.1,
+    attack: 12,
+    aggro: 9,
+    range: 1.45,
+    attackCooldown: 1100,
+    xp: 38,
+    gold: 6,
+    respawn: 15000,
+
+    loot: [
+      ["iron_ore", 2, .75],
+      ["copper_ore", 1, .20],
+    ],
+
+    equipment: [
+      ["stone_sword", .12],
+      ["iron_sword", .05],
+    ],
+  },
+
+
+  bandit: {
+    label: "Saqueador",
+    level: 6,
+    hp: 84,
+    speed: 2.3,
+    attack: 15,
+    aggro: 9,
+    range: 1.5,
+    attackCooldown: 1050,
+    xp: 52,
+    gold: 12,
+    respawn: 18000,
+
+    loot: [
+      ["copper_ore", 2, .70],
+      ["iron_ingot", 1, .18],
+    ],
+
+    equipment: [
+      ["copper_sword", .05],
+      ["iron_sword", .08],
+    ],
+  },
+
+
+  wraith: {
+    label: "Espectro Prateado",
+    level: 9,
+    hp: 125,
+    speed: 2.65,
+    attack: 20,
+    aggro: 10,
+    range: 1.6,
+    attackCooldown: 950,
+    xp: 85,
+    gold: 22,
+    respawn: 22000,
+
+    loot: [
+      ["silver_ore", 2, .70],
+      ["herb", 1, .30],
+    ],
+
+    equipment: [
+      ["silver_sword", .025],
+      ["copper_sword", .06],
     ],
   },
 
 };
 
 
+
 export const ENEMY_LAYOUT = [
 
-  ["slime_01", "slime", 15, -18],
-  ["slime_02", "slime", 20, -15],
-  ["slime_03", "slime", 23, -20],
-  ["slime_04", "slime", 17, -23],
+  /*
+   * PRADO DO SUL
+   */
 
-  ["wolf_01", "wolf", -22, 10],
-  ["wolf_02", "wolf", -25, 16],
-  ["wolf_03", "wolf", -19, 20],
+  ["slime_01", "slime", 4, -27],
+  ["slime_02", "slime", 11, -32],
+  ["slime_03", "slime", -3, -37],
+  ["slime_04", "slime", 13, -43],
+  ["slime_05", "slime", -10, -46],
 
-  ["goblin_01", "goblin", 23, 5],
-  ["goblin_02", "goblin", 26, 10],
-  ["goblin_03", "goblin", 24, 16],
+
+  /*
+   * BOSQUE ANTIGO
+   */
+
+  ["wolf_01", "wolf", -25, -3],
+  ["wolf_02", "wolf", -32, 8],
+  ["wolf_03", "wolf", -40, -9],
+  ["wolf_04", "wolf", -47, 6],
+
+  ["boar_01", "boar", -30, -25],
+  ["boar_02", "boar", -39, -30],
+  ["boar_03", "boar", -47, -39],
+
+
+  /*
+   * PÂNTANO DA NÉVOA
+   */
+
+  ["spider_01", "swamp_spider", -22, 27],
+  ["spider_02", "swamp_spider", -31, 37],
+  ["spider_03", "swamp_spider", -42, 31],
+  ["spider_04", "swamp_spider", -12, 46],
+
+
+  /*
+   * COLINAS DE COBRE
+   */
+
+  ["goblin_01", "goblin", 25, 13],
+  ["goblin_02", "goblin", 33, 20],
+  ["goblin_03", "goblin", 41, 14],
+  ["goblin_04", "goblin", 47, 27],
+
+  ["bandit_01", "bandit", 30, 38],
+  ["bandit_02", "bandit", 40, 42],
+  ["bandit_03", "bandit", 48, 46],
+
+
+  /*
+   * FRONTEIRA PRATEADA
+   */
+
+  ["wraith_01", "wraith", 27, -25],
+  ["wraith_02", "wraith", 36, -34],
+  ["wraith_03", "wraith", 44, -42],
+  ["wraith_04", "wraith", 48, -49],
 
 ];
 
@@ -1993,5 +2397,171 @@ export const QUESTS = {
 
     rewardText: "35 XP · 15 ouro · Ensopado de Peixe",
   },
+
+
+  explore_south: {
+    npc: "lina",
+    title: "Além dos Muros",
+    description: "Explore os campos ao sul da vila.",
+    requires: [
+      "slime_hunt",
+    ],
+
+    objectives: [
+      {
+        type: "discover",
+        target: "sunmeadow",
+        amount: 1,
+        label: "Descubra o Prado do Sul",
+      },
+    ],
+
+    reward: {
+      xp: 30,
+      gold: 10,
+      items: [
+        {
+          id: "apple",
+          qty: 2,
+          rarity: "common",
+        },
+      ],
+    },
+
+    rewardText: "30 XP · 10 ouro · 2 Maçãs",
+  },
+
+
+  explore_forest: {
+    npc: "hunter",
+    title: "O Bosque Antigo",
+    description: "Kael ouviu histórias sobre uma floresta a oeste.",
+    requires: [
+      "wolf_hunt",
+    ],
+
+    objectives: [
+      {
+        type: "discover",
+        target: "ancient_forest",
+        amount: 1,
+        label: "Descubra o Bosque Antigo",
+      },
+    ],
+
+    reward: {
+      xp: 55,
+      gold: 22,
+      items: [
+        {
+          id: "bandage",
+          qty: 2,
+          rarity: "common",
+        },
+      ],
+    },
+
+    rewardText: "55 XP · 22 ouro · 2 Bandagens",
+  },
+
+
+  explore_marsh: {
+    npc: "fisherman",
+    title: "Névoa ao Norte",
+    description: "Nilo acredita que existe um lago maior além do pântano.",
+    requires: [
+      "fisherman_intro",
+    ],
+
+    objectives: [
+      {
+        type: "discover",
+        target: "mist_marsh",
+        amount: 1,
+        label: "Descubra o Pântano da Névoa",
+      },
+    ],
+
+    reward: {
+      xp: 65,
+      gold: 28,
+      items: [
+        {
+          id: "grilled_fish",
+          qty: 2,
+          rarity: "common",
+        },
+      ],
+    },
+
+    rewardText: "65 XP · 28 ouro · 2 Peixes Grelhados",
+  },
+
+
+  explore_copper: {
+    npc: "blacksmith",
+    title: "As Colinas de Cobre",
+    description: "Borin quer saber o que existe nas montanhas orientais.",
+    requires: [
+      "iron_age",
+    ],
+
+    objectives: [
+      {
+        type: "discover",
+        target: "copper_highlands",
+        amount: 1,
+        label: "Descubra as Colinas de Cobre",
+      },
+    ],
+
+    reward: {
+      xp: 80,
+      gold: 35,
+      items: [
+        {
+          id: "iron_ingot",
+          qty: 2,
+          rarity: "common",
+        },
+      ],
+    },
+
+    rewardText: "80 XP · 35 ouro · 2 Lingotes de Ferro",
+  },
+
+
+  explore_silver: {
+    npc: "blacksmith",
+    title: "A Fronteira Prateada",
+    description: "Encontre as antigas terras de mineração de prata.",
+    requires: [
+      "copper_age",
+    ],
+
+    objectives: [
+      {
+        type: "discover",
+        target: "silver_frontier",
+        amount: 1,
+        label: "Descubra a Fronteira Prateada",
+      },
+    ],
+
+    reward: {
+      xp: 150,
+      gold: 80,
+      items: [
+        {
+          id: "copper_ingot",
+          qty: 2,
+          rarity: "common",
+        },
+      ],
+    },
+
+    rewardText: "150 XP · 80 ouro · 2 Lingotes de Cobre",
+  },
+
 
 };
