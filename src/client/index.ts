@@ -299,6 +299,12 @@ document.body.insertAdjacentHTML(
     </h2>
 
     <div id="region-map-summary"></div>
+
+    <div class="travel-map-hint">
+      🌀 Viagem rápida:
+      Vila do Vale ↔ Posto do Prado
+    </div>
+
     <div id="region-map-list"></div>
   </div>
 
@@ -1021,6 +1027,73 @@ button {
 .landmark-map-item.unknown {
   opacity: .42;
 }
+
+
+.travel-map-hint {
+  margin: 8px 0 10px;
+  padding: 7px 8px;
+  border: 1px solid #34483e;
+  background: #111a16;
+  color: #9eada2;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.travel-map-button {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  margin-top: 9px;
+  padding: 7px 8px;
+
+  border:
+    1px solid #80692e;
+
+  border-bottom:
+    3px solid #654f21;
+
+  background:
+    #c6a34d;
+
+  color:
+    #172019;
+
+  font:
+    900 9px monospace;
+
+  cursor:
+    pointer;
+}
+
+.travel-map-button:hover {
+  filter:
+    brightness(1.08);
+}
+
+.travel-map-button:disabled {
+  cursor:
+    default;
+
+  opacity:
+    .5;
+
+  filter:
+    none;
+}
+
+.travel-map-lock {
+  margin-top: 8px;
+  padding: 6px 7px;
+  border: 1px solid #403f35;
+  background: #171914;
+  color: #827f6d;
+  font-size: 8px;
+}
+
+/*
+ * ETAPA 11.3C MAP TRAVEL
+ */
+
 
 
 
@@ -5334,6 +5407,138 @@ function renderRegionMap() {
     }
 
 
+    /*
+     * ETAPA 11.3C
+     *
+     * Apenas conecta o mapa ao travel-jump
+     * que já foi validado pela tecla Y.
+     *
+     * Nenhuma lógica nova de teleporte existe aqui.
+     */
+
+
+    if (
+      regionId ===
+      "village"
+    ) {
+
+      const button =
+        document.createElement(
+          "button",
+        );
+
+
+      button.className =
+        "travel-map-button";
+
+
+      button.textContent =
+        "🌀 Viajar para Vila do Vale";
+
+
+      button.onclick =
+        () => {
+
+          button.disabled =
+            true;
+
+
+          button.textContent =
+            "🌀 Viajando...";
+
+
+          room?.send(
+            "travel-jump",
+
+            {
+              target:
+                "village_waystone",
+            },
+          );
+        };
+
+
+      card.appendChild(
+        button,
+      );
+    }
+
+
+    if (
+      regionId ===
+      "sunmeadow"
+    ) {
+
+      if (
+        knownLandmarks.has(
+          "sunmeadow_outpost",
+        )
+      ) {
+
+        const button =
+          document.createElement(
+            "button",
+          );
+
+
+        button.className =
+          "travel-map-button";
+
+
+        button.textContent =
+          "🌀 Viajar para Posto do Prado";
+
+
+        button.onclick =
+          () => {
+
+            button.disabled =
+              true;
+
+
+            button.textContent =
+              "🌀 Viajando...";
+
+
+            room?.send(
+              "travel-jump",
+
+              {
+                target:
+                  "sunmeadow_outpost",
+              },
+            );
+          };
+
+
+        card.appendChild(
+          button,
+        );
+      }
+
+      else {
+
+        const locked =
+          document.createElement(
+            "div",
+          );
+
+
+        locked.className =
+          "travel-map-lock";
+
+
+        locked.textContent =
+          "🔒 Descubra o Posto do Prado para liberar a viagem rápida.";
+
+
+        card.appendChild(
+          locked,
+        );
+      }
+    }
+
+
     regionMapList.appendChild(
       card,
     );
@@ -6425,6 +6630,9 @@ async function connect() {
 
         lastRegionHud =
           "";
+
+
+        closeModals();
 
 
         showToast(
