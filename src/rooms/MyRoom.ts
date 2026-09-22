@@ -1118,7 +1118,7 @@ export class MyRoom
     64;
 
 
-  inputs =
+  playerInputs =
     new Map();
 
 
@@ -2397,7 +2397,7 @@ export class MyRoom
     }
 
 
-    this.inputs.set(
+    this.playerInputs.set(
       client.sessionId,
 
       {
@@ -2468,7 +2468,7 @@ export class MyRoom
       ) => {
 
         const input =
-          this.inputs.get(
+          this.playerInputs.get(
             sessionId,
           )
           ||
@@ -4310,7 +4310,7 @@ export class MyRoom
       false;
 
 
-    this.inputs.set(
+    this.playerInputs.set(
       client.sessionId,
 
       {
@@ -8879,7 +8879,7 @@ export class MyRoom
     );
 
 
-    this.inputs.set(
+    this.playerInputs.set(
       client.sessionId,
       {
         ...EMPTY_INPUT,
@@ -8960,7 +8960,7 @@ export class MyRoom
     );
 
 
-    this.inputs.delete(
+    this.playerInputs.delete(
       client.sessionId,
     );
 
