@@ -1,0 +1,12 @@
+node_modules/
+dist/
+backups/
+*.log
+.DS_Store
+
+.env
+.env.*
+!.env.example
+
+data/players.json
+data/world.json
