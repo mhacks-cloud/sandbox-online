@@ -85,6 +85,128 @@ const OUTPOST_SERVICES = {
 };
 
 
+
+/*
+ * ETAPA 12.1 REGIONAL NPCS
+ *
+ * Espelho visual dos moradores regionais.
+ * O servidor continua sendo a autoridade da interação.
+ */
+
+const REGIONAL_NPCS = {
+
+  teo: {
+
+    name:
+      "Téo",
+
+    role:
+      "Mensageiro do Prado",
+
+    region:
+      "sunmeadow",
+
+    x:
+      7,
+
+    z:
+      -30,
+
+    visualKind:
+      "farmer",
+  },
+
+
+  runa: {
+
+    name:
+      "Runa",
+
+    role:
+      "Lenhadora do Bosque",
+
+    region:
+      "ancient_forest",
+
+    x:
+      -31,
+
+    z:
+      -8,
+
+    visualKind:
+      "hunter",
+  },
+
+
+  sena: {
+
+    name:
+      "Sena",
+
+    role:
+      "Herbalista da Névoa",
+
+    region:
+      "mist_marsh",
+
+    x:
+      -21,
+
+    z:
+      30,
+
+    visualKind:
+      "lina",
+  },
+
+
+  dario: {
+
+    name:
+      "Dario",
+
+    role:
+      "Mineiro das Colinas",
+
+    region:
+      "copper_highlands",
+
+    x:
+      31,
+
+    z:
+      23,
+
+    visualKind:
+      "blacksmith",
+  },
+
+
+  eira: {
+
+    name:
+      "Eira",
+
+    role:
+      "Sentinela da Fronteira",
+
+    region:
+      "silver_frontier",
+
+    x:
+      31,
+
+    z:
+      -28,
+
+    visualKind:
+      "fisherman",
+  },
+
+};
+
+
 document.body.insertAdjacentHTML(
   "beforeend",
 
@@ -291,6 +413,44 @@ document.body.insertAdjacentHTML(
       id="chest-grid"
       class="slot-grid chest-grid"
     ></div>
+  </div>
+
+
+  <div
+    id="regional-dialog-panel"
+    class="panel modal interactive"
+  >
+    <button
+      class="modal-close"
+      data-close-modal
+    >
+      ×
+    </button>
+
+    <div
+      id="regional-dialog-role"
+      class="eyebrow"
+    >
+      VIAJANTE
+    </div>
+
+    <h2 id="regional-dialog-name">
+      Morador
+    </h2>
+
+    <div class="modal-section">
+
+      <p id="regional-dialog-text">
+        ...
+      </p>
+
+      <div
+        id="regional-dialog-tip"
+        class="profession-info"
+      >
+      </div>
+
+    </div>
   </div>
 
 
@@ -1278,6 +1438,23 @@ const chestHeading =
 const chestGrid =
   $("#chest-grid");
 
+
+const regionalDialogPanel =
+  $("#regional-dialog-panel");
+
+const regionalDialogRole =
+  $("#regional-dialog-role");
+
+const regionalDialogName =
+  $("#regional-dialog-name");
+
+const regionalDialogText =
+  $("#regional-dialog-text");
+
+const regionalDialogTip =
+  $("#regional-dialog-tip");
+
+
 const questPanel =
   $("#quest-panel");
 
@@ -1538,6 +1715,66 @@ function nearestOutpostService(
         id,
         service,
         landmark,
+        distance,
+      };
+    }
+  }
+
+
+  return result;
+}
+
+
+
+function nearestRegionalNpc(
+  x,
+  z,
+  radius =
+    2.4,
+) {
+
+  let result =
+    null;
+
+
+  for (
+    const [
+      id,
+      npc,
+    ]
+    of Object.entries(
+      REGIONAL_NPCS,
+    )
+  ) {
+
+    const distance =
+      Math.hypot(
+        npc.x -
+        x,
+
+        npc.z -
+        z,
+      );
+
+
+    if (
+      distance <=
+      radius
+      &&
+      (
+        !result
+        ||
+        distance <
+        result.distance
+      )
+    ) {
+
+      result = {
+
+        id,
+
+        npc,
+
         distance,
       };
     }
@@ -3036,6 +3273,33 @@ function buildLandmarkVisuals() {
 }
 
 
+
+function buildRegionalNpcVisuals() {
+
+  for (
+    const npc
+    of Object.values(
+      REGIONAL_NPCS,
+    )
+  ) {
+
+    addSpriteObject(
+      npc.visualKind,
+
+      `${
+        npc.name
+      } · ${
+        npc.role
+      }`,
+
+      npc.x,
+
+      npc.z,
+    );
+  }
+}
+
+
 function buildWorld() {
 
   const grass =
@@ -3393,6 +3657,8 @@ buildWorld();
 buildRegionVisuals();
 
 buildLandmarkVisuals();
+
+buildRegionalNpcVisuals();
 
 addAdvancedFishingSpots();
 
@@ -5765,6 +6031,10 @@ function closeModals() {
     "none";
 
 
+  regionalDialogPanel.style.display =
+    "none";
+
+
   questPanel.style.display =
     "none";
 
@@ -5793,6 +6063,7 @@ function openModal(
     shop: shopPanel,
     craft: craftPanel,
     chest: chestPanel,
+    regional: regionalDialogPanel,
     quests: questPanel,
     professions: professionPanel,
     regions: regionMapPanel,
@@ -7238,6 +7509,60 @@ async function connect() {
     );
 
 
+
+    room.onMessage(
+      "open-regional-dialog",
+
+      (
+        message,
+      ) => {
+
+        const region =
+          REGIONS[
+            message?.region
+          ];
+
+
+        regionalDialogRole.textContent =
+          `${
+            message?.role
+            ||
+            "Morador"
+          } · ${
+            region?.label
+            ||
+            "Região"
+          }`
+          .toUpperCase();
+
+
+        regionalDialogName.textContent =
+          message?.name
+          ||
+          "Morador";
+
+
+        regionalDialogText.textContent =
+          message?.text
+          ||
+          "...";
+
+
+        regionalDialogTip.textContent =
+          message?.tip
+            ? `💡 ${
+                message.tip
+              }`
+            : "";
+
+
+        openModal(
+          "regional",
+        );
+      },
+    );
+
+
     room.onMessage(
       "open-quests",
 
@@ -8148,6 +8473,35 @@ function updateInteraction() {
         outpostService
           .service
           .label
+      }`;
+
+
+    interaction.style.display =
+      "block";
+
+
+    return;
+  }
+
+
+
+  const regionalNpc =
+    nearestRegionalNpc(
+      localPlayer.x,
+      localPlayer.z,
+      2.4,
+    );
+
+
+  if (
+    regionalNpc
+  ) {
+
+    interaction.textContent =
+      `[ E ] Falar com ${
+        regionalNpc
+          .npc
+          .name
       }`;
 
 

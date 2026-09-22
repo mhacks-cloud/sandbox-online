@@ -117,6 +117,144 @@ const OUTPOST_SERVICES = {
 };
 
 
+
+/*
+ * ETAPA 12.1 REGIONAL NPCS
+ *
+ * Moradores dos postos regionais.
+ *
+ * Não fazem parte do Schema nem do save.
+ */
+
+const REGIONAL_NPCS = {
+
+  teo: {
+
+    name:
+      "Téo",
+
+    role:
+      "Mensageiro do Prado",
+
+    region:
+      "sunmeadow",
+
+    x:
+      7,
+
+    z:
+      -30,
+
+    text:
+      "Levo recados entre a Vila do Vale e os viajantes do Prado. Os campos parecem tranquilos, mas quem se afasta demais da estrada encontra problemas.",
+
+    tip:
+      "O Posto do Prado é um bom ponto de apoio antes de explorar o sul.",
+  },
+
+
+  runa: {
+
+    name:
+      "Runa",
+
+    role:
+      "Lenhadora do Bosque",
+
+    region:
+      "ancient_forest",
+
+    x:
+      -31,
+
+    z:
+      -8,
+
+    text:
+      "O Bosque Antigo dá madeira melhor que a encontrada perto da vila, mas as árvores mais velhas não cedem para qualquer ferramenta.",
+
+    tip:
+      "Prepare ferramentas melhores antes de avançar para o interior do bosque.",
+  },
+
+
+  sena: {
+
+    name:
+      "Sena",
+
+    role:
+      "Herbalista da Névoa",
+
+    region:
+      "mist_marsh",
+
+    x:
+      -21,
+
+    z:
+      30,
+
+    text:
+      "A névoa muda rápido por aqui. Quem segue apenas os olhos acaba entrando fundo demais no pântano.",
+
+    tip:
+      "Use o Abrigo da Névoa como referência e fique atento às criaturas do pântano.",
+  },
+
+
+  dario: {
+
+    name:
+      "Dario",
+
+    role:
+      "Mineiro das Colinas",
+
+    region:
+      "copper_highlands",
+
+    x:
+      31,
+
+    z:
+      23,
+
+    text:
+      "As Colinas de Cobre ainda têm bons veios de minério. O problema é que todo mundo que sabe disso quer uma parte.",
+
+    tip:
+      "Minério de cobre e inimigos mais perigosos aparecem nesta região.",
+  },
+
+
+  eira: {
+
+    name:
+      "Eira",
+
+    role:
+      "Sentinela da Fronteira",
+
+    region:
+      "silver_frontier",
+
+    x:
+      31,
+
+    z:
+      -28,
+
+    text:
+      "Daqui para frente as estradas ficam silenciosas. Os espectros não fazem barulho até já estarem perto demais.",
+
+    tip:
+      "A Fronteira Prateada é uma região avançada. Venha preparado antes de explorar longe do posto.",
+  },
+
+};
+
+
 function normalizeRarity(
   value,
 ) {
@@ -4483,6 +4621,66 @@ export class MyRoom
 
 
 
+
+  findNearestRegionalNpc(
+    x,
+    z,
+    radius =
+      2.4,
+  ) {
+
+    let result =
+      null;
+
+
+    for (
+      const [
+        id,
+        npc,
+      ]
+      of Object.entries(
+        REGIONAL_NPCS,
+      )
+    ) {
+
+      const distance =
+        Math.hypot(
+          npc.x -
+          x,
+
+          npc.z -
+          z,
+        );
+
+
+      if (
+        distance <=
+        radius
+        &&
+        (
+          !result
+          ||
+          distance <
+          result.distance
+        )
+      ) {
+
+        result = {
+
+          id,
+
+          npc,
+
+          distance,
+        };
+      }
+    }
+
+
+    return result;
+  }
+
+
   findNearestOutpostService(
     x,
     z,
@@ -4944,6 +5142,59 @@ export class MyRoom
 
         return;
       }
+    }
+
+
+    /*
+     * NPCs REGIONAIS
+     */
+
+    const regionalNpc =
+      this.findNearestRegionalNpc(
+        player.x,
+        player.z,
+        2.4,
+      );
+
+
+    if (
+      regionalNpc
+    ) {
+
+      client.send(
+        "open-regional-dialog",
+
+        {
+          id:
+            regionalNpc.id,
+
+          name:
+            regionalNpc.npc.name,
+
+          role:
+            regionalNpc.npc.role,
+
+          region:
+            regionalNpc.npc.region,
+
+          text:
+            regionalNpc.npc.text,
+
+          tip:
+            regionalNpc.npc.tip,
+        },
+      );
+
+
+      console.log(
+        "[REGIONAL/NPC]",
+        player.name,
+        "falou com",
+        regionalNpc.npc.name,
+      );
+
+
+      return;
     }
 
 
