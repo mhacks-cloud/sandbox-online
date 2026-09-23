@@ -3298,7 +3298,20 @@ export function updatePremiumPlayerSprite(
   }
 
 
-  const left =
+  /*
+   * ETAPA 19 2D
+   *
+   * Os personagens reais possuem orientação lateral.
+   *
+   * Quando o jogador anda somente para cima/baixo,
+   * mantemos a última direção horizontal.
+   *
+   * Isso evita:
+   *
+   * W/S → personagem vira sozinho para direita.
+   */
+
+  const explicitlyLeft =
     direction ===
     1
     ||
@@ -3309,10 +3322,60 @@ export function updatePremiumPlayerSprite(
     3;
 
 
+  const explicitlyRight =
+    direction ===
+    5
+    ||
+    direction ===
+    6
+    ||
+    direction ===
+    7;
+
+
+  if (
+    explicitlyLeft
+  ) {
+
+    sprite.userData.facingLeft =
+      true;
+  }
+
+
+  if (
+    explicitlyRight
+  ) {
+
+    sprite.userData.facingLeft =
+      false;
+  }
+
+
+  if (
+    typeof sprite.userData.facingLeft
+    !==
+    "boolean"
+  ) {
+
+    sprite.userData.facingLeft =
+      false;
+  }
+
+
+  const horizontalScale =
+    Math.abs(
+      Number(
+        sprite.scale.x,
+      )
+      ||
+      2.1,
+    );
+
+
   sprite.scale.x =
-    left
-      ? -2.1
-      : 2.1;
+    sprite.userData.facingLeft
+      ? -horizontalScale
+      : horizontalScale;
 }
 
 

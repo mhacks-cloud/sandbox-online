@@ -29,15 +29,29 @@ describe(
 
 
     it(
-      "bloqueia uma casa",
+      "bloqueia somente a base física da casa 2D",
       () => {
 
         assert.strictEqual(
           isStaticBlocked(
             -13,
-            -12,
+            -12.82,
           ),
           true,
+        );
+
+
+        /*
+         * Em frente à casa deve existir espaço livre
+         * para o jogador chegar perto da porta.
+         */
+
+        assert.strictEqual(
+          isStaticBlocked(
+            -13,
+            -11.4,
+          ),
+          false,
         );
       },
     );
@@ -73,26 +87,36 @@ describe(
 
         const result =
           resolvePlayerMovement(
-            -15.6,
-            -10.5,
+            -15,
+            -12.82,
             .8,
             .5,
           );
 
 
+        /*
+         * X tenta entrar na parede da casa:
+         * deve ser bloqueado.
+         */
+
         assert.ok(
           Math.abs(
             result.x -
-            -15.6,
+            -15,
           )
           <
           .001,
         );
 
 
+        /*
+         * Z continua livre:
+         * jogador desliza ao longo da parede.
+         */
+
         assert.ok(
           result.z >
-          -10.5,
+          -12.82,
         );
       },
     );

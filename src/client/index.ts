@@ -10849,6 +10849,26 @@ addEventListener(
         localVisual
       ) {
 
+        /*
+         * O pack atual possui ataque lateral.
+         *
+         * Por isso o efeito usa exatamente o mesmo lado
+         * para o qual o sprite está olhando.
+         */
+
+        const attackDirection =
+          localVisual
+            .sprite
+            .userData
+            .facingLeft
+              ? 2
+              : 6;
+
+
+        localVisual.direction =
+          attackDirection;
+
+
         playRealCharacterAction(
           localVisual.sprite,
           "attack",
@@ -10858,7 +10878,7 @@ addEventListener(
 
         playAttackEffect(
           localVisual.group.position,
-          localVisual.direction,
+          attackDirection,
         );
       }
 

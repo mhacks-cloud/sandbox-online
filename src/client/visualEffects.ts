@@ -619,8 +619,45 @@ export function playAttackEffect(
   );
 
 
+  /*
+   * ETAPA 19 2D
+   *
+   * RingGeometry começa apontando para +X.
+   *
+   * Nosso mapa de direção é:
+   *
+   * 0 = baixo
+   * 2 = esquerda
+   * 4 = cima
+   * 6 = direita
+   *
+   * O cálculo antigo estava 90 graus deslocado.
+   */
+
+  const normalizedDirection =
+    (
+      (
+        Number(
+          direction,
+        )
+        ||
+        0
+      )
+      %
+      8
+      +
+      8
+    )
+    %
+    8;
+
+
   const angle =
-    direction
+    (
+      6
+      -
+      normalizedDirection
+    )
     *
     Math.PI
     /
@@ -628,7 +665,7 @@ export function playAttackEffect(
 
 
   group.rotation.y =
-    -angle;
+    angle;
 
 
   group.position.copy(

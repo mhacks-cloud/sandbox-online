@@ -26,40 +26,50 @@ export const WORLD_STATIC_COLLIDERS = [
    * CASAS DA VILA
    */
 
+  /*
+   * ETAPA 19 — FOOTPRINT 2D
+   *
+   * No sprite Tiny Swords o ponto X/Z representa
+   * a base/frente da construção.
+   *
+   * Portanto o colisor fica somente na parte inferior
+   * do prédio, não no telhado inteiro.
+   */
+
   {
     id: "village_house_nw",
     shape: "aabb",
     x: -13,
-    z: -12,
-    halfX: 2,
-    halfZ: 1.75,
+    z: -12.82,
+    halfX: 1.55,
+    halfZ: .62,
   },
 
   {
     id: "village_house_ne",
     shape: "aabb",
     x: 13,
-    z: -11,
-    halfX: 2,
-    halfZ: 1.75,
+    z: -11.82,
+    halfX: 1.55,
+    halfZ: .62,
   },
 
   {
     id: "village_house_sw",
     shape: "aabb",
     x: -14,
-    z: 13,
-    halfX: 2,
-    halfZ: 1.75,
+    z: 12.18,
+    halfX: 1.55,
+    halfZ: .62,
   },
 
   {
     id: "village_house_se",
     shape: "aabb",
     x: 14,
-    z: 9,
-    halfX: 2,
-    halfZ: 1.75,
+    z: 8.18,
+    halfX: 1.55,
+    halfZ: .62,
   },
 
 
@@ -904,23 +914,30 @@ export function resourceCollisionRadius(
     kind
   ) {
 
+    /*
+     * ETAPA 19 — FOOTPRINTS 2D
+     *
+     * Colisão agora representa tronco/base,
+     * e não toda a copa/sprite.
+     */
+
     case "tree":
-      return .64;
+      return .40;
 
     case "hard_tree":
-      return .72;
+      return .46;
 
     case "rock":
-      return .52;
+      return .36;
 
     case "ore":
-      return .52;
+      return .40;
 
     case "copper_ore":
-      return .54;
+      return .42;
 
     case "silver_ore":
-      return .54;
+      return .42;
 
     default:
       return 0;
