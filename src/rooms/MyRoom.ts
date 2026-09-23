@@ -88,6 +88,12 @@ import {
 } from "../shared/caves";
 
 import {
+  PLAYER_COLLISION_RADIUS,
+  resolvePlayerMovement,
+  resourceCollisionRadius,
+} from "../shared/worldCollision";
+
+import {
   loadWorldSave,
   saveWorldSave,
   snapshotFarmPlots,
@@ -1488,7 +1494,7 @@ export class MyRoom
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 15:",
+      "🌎 Sandbox Online Etapa 17:",
       this.roomId,
     );
 
@@ -2449,6 +2455,73 @@ export class MyRoom
   }
 
 
+  isMovementBlockedByResource(
+    x,
+    z,
+  ) {
+
+    let blocked =
+      false;
+
+
+    this.state.nodes.forEach(
+      (
+        node,
+      ) => {
+
+        if (
+          blocked
+          ||
+          !node.active
+        ) {
+
+          return;
+        }
+
+
+        const radius =
+          resourceCollisionRadius(
+            node.kind,
+          );
+
+
+        if (
+          radius <=
+          0
+        ) {
+
+          return;
+        }
+
+
+        if (
+          Math.hypot(
+            node.x -
+            x,
+
+            node.z -
+            z,
+          )
+          <
+          (
+            radius
+            +
+            PLAYER_COLLISION_RADIUS
+          )
+        ) {
+
+          blocked =
+            true;
+        }
+      },
+    );
+
+
+    return blocked;
+  }
+
+
+
   receiveInput(
     client,
     payload,
@@ -2605,66 +2678,48 @@ export class MyRoom
           moving
         ) {
 
-          const bounds =
-            activeCave
-              ?.interior
-              ?.bounds;
+          const movement =
+            resolvePlayerMovement(
+              player.x,
+              player.z,
 
+              input.moveX *
+              speed *
+              dt,
 
-          const minX =
-            bounds?.minX
-            ??
-            -WORLD_BOUNDS;
+              input.moveZ *
+              speed *
+              dt,
 
+              {
+                caveId:
+                  caveState?.id
+                  ||
+                  "",
 
-          const maxX =
-            bounds?.maxX
-            ??
-            WORLD_BOUNDS;
-
-
-          const minZ =
-            bounds?.minZ
-            ??
-            -WORLD_BOUNDS;
-
-
-          const maxZ =
-            bounds?.maxZ
-            ??
-            WORLD_BOUNDS;
+                dynamicBlocked:
+                  (
+                    x,
+                    z,
+                  ) =>
+                    this.isMovementBlockedByResource(
+                      x,
+                      z,
+                    ),
+              },
+            );
 
 
           player.x =
-            Math.max(
-              minX,
-
-              Math.min(
-                maxX,
-
-                player.x
-                +
-                input.moveX *
-                speed *
-                dt,
-              ),
-            );
+            movement.x;
 
 
           player.z =
-            Math.max(
-              minZ,
+            movement.z;
 
-              Math.min(
-                maxZ,
 
-                player.z
-                +
-                input.moveZ *
-                speed *
-                dt,
-              ),
-            );
+          player.moving =
+            movement.moved;
 
 
           player.direction =

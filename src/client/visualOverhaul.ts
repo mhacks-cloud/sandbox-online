@@ -2824,20 +2824,25 @@ function buildVillage(
    * Cercas.
    */
 
+  /*
+   * ETAPA 17
+   * Cerca acompanhando a borda da fazenda.
+   */
+
   addFence(
     root,
-    -15,
-    4,
+    -16.4,
     7,
+    9,
     false,
   );
 
 
   addFence(
     root,
-    -11.5,
-    .5,
-    7,
+    -13.5,
+    2.5,
+    6,
     true,
   );
 
