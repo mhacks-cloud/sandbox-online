@@ -727,8 +727,34 @@ export function caravanPositionAt(
     60;
 
 
+  /*
+   * Movimento contínuo.
+   *
+   * O relógio visual usa minutos inteiros,
+   * mas a posição da caravana usa o tempo
+   * real fracionado.
+   *
+   * Assim Miro não "pula" uma vez por segundo.
+   */
+
+  const rawTime =
+    (
+      nowMs %
+      WORLD_DAY_MS
+      +
+      WORLD_DAY_MS
+    )
+    %
+    WORLD_DAY_MS;
+
+
+  const continuousMinuteOfDay =
+    rawTime /
+    1000;
+
+
   const daytime =
-    clock.minuteOfDay
+    continuousMinuteOfDay
     -
     startMinute;
 
