@@ -77,6 +77,15 @@ import {
   updateVisualOverhaul,
 } from "./visualOverhaul";
 
+import {
+  emitFootstep,
+  initVisualEffects,
+  playAttackEffect,
+  playPlayerDamage,
+  spawnImpact,
+  updateVisualEffects,
+} from "./visualEffects";
+
 
 const EQUIPMENT_LABELS = {
 
@@ -4705,6 +4714,10 @@ buildVisualOverhaul(
   renderer,
 );
 
+initVisualEffects(
+  scene,
+);
+
 
 class PlayerVisual {
 
@@ -4757,6 +4770,14 @@ class PlayerVisual {
 
 
     this.direction =
+      0;
+
+
+    this.visualId =
+      id;
+
+
+    this.flashUntil =
       0;
 
 
@@ -4859,6 +4880,42 @@ class PlayerVisual {
           this.baseSpriteY,
       },
     );
+
+
+    emitFootstep(
+      this.visualId,
+      this.group.position,
+      this.moving,
+      elapsed,
+    );
+
+
+    if (
+      performance.now()
+      <
+      this.flashUntil
+    ) {
+
+      this.sprite.material.color.setHex(
+        0xff8178,
+      );
+    }
+
+    else {
+
+      this.sprite.material.color.setHex(
+        0xffffff,
+      );
+    }
+  }
+
+
+  hit() {
+
+    this.flashUntil =
+      performance.now()
+      +
+      150;
   }
 }
 
@@ -4938,6 +4995,26 @@ class ResourceVisual {
     );
 
 
+    this.kind =
+      node.kind;
+
+
+    this.phase =
+      node.x *
+      .31
+      +
+      node.z *
+      .19;
+
+
+    this.baseSpriteY =
+      this.sprite.position.y;
+
+
+    this.flashUntil =
+      0;
+
+
     this.sync(
       node,
     );
@@ -4953,7 +5030,153 @@ class ResourceVisual {
   }
 
 
+  update(
+    elapsed =
+      0,
+  ) {
+
+    const plantLike =
+      this.kind ===
+      "tree"
+      ||
+      this.kind ===
+      "hard_tree"
+      ||
+      this.kind ===
+      "bush"
+      ||
+      this.kind ===
+      "herb_bush";
+
+
+    if (
+      plantLike
+    ) {
+
+      this.sprite.material.rotation =
+        Math.sin(
+          elapsed *
+          1.35
+          +
+          this.phase,
+        )
+        *
+        .018;
+
+
+      this.sprite.position.y =
+        this.baseSpriteY
+        +
+        Math.sin(
+          elapsed *
+          1.1
+          +
+          this.phase,
+        )
+        *
+        .025;
+    }
+
+
+    const oreLike =
+      this.kind ===
+      "ore"
+      ||
+      this.kind ===
+      "copper_ore"
+      ||
+      this.kind ===
+      "silver_ore";
+
+
+    if (
+      oreLike
+    ) {
+
+      const glow =
+        .91
+        +
+        (
+          Math.sin(
+            elapsed *
+            2.3
+            +
+            this.phase,
+          )
+          *
+          .5
+          +
+          .5
+        )
+        *
+        .09;
+
+
+      this.sprite.material.color.setRGB(
+        glow,
+        glow,
+        glow,
+      );
+    }
+
+    else if (
+      performance.now()
+      >=
+      this.flashUntil
+    ) {
+
+      this.sprite.material.color.setHex(
+        0xffffff,
+      );
+    }
+
+
+    if (
+      performance.now()
+      <
+      this.flashUntil
+    ) {
+
+      this.sprite.material.color.setHex(
+        0xffe1a1,
+      );
+    }
+  }
+
+
   hit() {
+
+    this.flashUntil =
+      performance.now()
+      +
+      130;
+
+
+    const kind =
+      this.kind ===
+      "tree"
+      ||
+      this.kind ===
+      "hard_tree"
+        ? "wood"
+        : (
+            this.kind ===
+            "silver_ore"
+              ? "silver"
+              : (
+                  this.kind ===
+                  "rock"
+                    ? "stone"
+                    : "ore"
+                )
+          );
+
+
+    spawnImpact(
+      this.group.position,
+      kind,
+    );
+
 
     this.sprite.position.x =
       .12;
@@ -4979,6 +5202,18 @@ class EnemyVisual {
 
     this.enemy =
       enemy;
+
+
+    this.phase =
+      enemy.x *
+      .27
+      +
+      enemy.z *
+      .33;
+
+
+    this.flashUntil =
+      0;
 
 
     this.target =
@@ -5026,6 +5261,10 @@ class EnemyVisual {
     );
 
 
+    this.baseSpriteY =
+      this.sprite.position.y;
+
+
     this.sync(
       enemy,
     );
@@ -5052,16 +5291,144 @@ class EnemyVisual {
   }
 
 
-  update() {
+  update(
+    elapsed =
+      0,
+  ) {
 
     this.group.position.lerp(
       this.target,
       .2,
     );
+
+
+    if (
+      this.enemy?.kind ===
+      "wraith"
+    ) {
+
+      this.sprite.position.y =
+        this.baseSpriteY
+        +
+        Math.sin(
+          elapsed *
+          2.4
+          +
+          this.phase,
+        )
+        *
+        .15;
+
+
+      this.sprite.material.opacity =
+        .78
+        +
+        (
+          Math.sin(
+            elapsed *
+            3
+            +
+            this.phase,
+          )
+          *
+          .5
+          +
+          .5
+        )
+        *
+        .18;
+    }
+
+    else {
+
+      this.sprite.material.opacity =
+        1;
+
+
+      if (
+        this.enemy?.moving
+      ) {
+
+        this.sprite.position.y =
+          this.baseSpriteY
+          +
+          Math.abs(
+            Math.sin(
+              elapsed *
+              8
+              +
+              this.phase,
+            ),
+          )
+          *
+          .065;
+
+
+        this.sprite.material.rotation =
+          Math.sin(
+            elapsed *
+            8
+            +
+            this.phase,
+          )
+          *
+          .025;
+      }
+
+      else {
+
+        this.sprite.position.y =
+          this.baseSpriteY
+          +
+          Math.sin(
+            elapsed *
+            1.8
+            +
+            this.phase,
+          )
+          *
+          .025;
+
+
+        this.sprite.material.rotation *=
+          .86;
+      }
+    }
+
+
+    if (
+      performance.now()
+      <
+      this.flashUntil
+    ) {
+
+      this.sprite.material.color.setHex(
+        0xff7770,
+      );
+    }
+
+    else {
+
+      this.sprite.material.color.setHex(
+        0xffffff,
+      );
+    }
   }
 
 
   hit() {
+
+    this.flashUntil =
+      performance.now()
+      +
+      140;
+
+
+    spawnImpact(
+      this.group.position,
+      "combat",
+    );
+
 
     this.sprite.position.x =
       .12;
@@ -5123,12 +5490,83 @@ class DropVisual {
       );
 
 
-    this.group.add(
+    this.sprite =
       makeSprite(
         texture,
         1.3,
         1.3,
-      ),
+      );
+
+
+    this.group.add(
+      this.sprite,
+    );
+
+
+    const rarityColors = {
+
+      common:
+        0xd4d4d4,
+
+      uncommon:
+        0x79d774,
+
+      rare:
+        0x69a8ff,
+
+      epic:
+        0xb879ff,
+
+      legendary:
+        0xffcc57,
+    };
+
+
+    this.aura =
+      new THREE.Mesh(
+
+        new THREE.RingGeometry(
+          .45,
+          .58,
+          18,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              rarityColors[
+                drop.rarity
+              ]
+              ||
+              rarityColors.common,
+
+            transparent:
+              true,
+
+            opacity:
+              .42,
+
+            side:
+              THREE.DoubleSide,
+
+            depthWrite:
+              false,
+          },
+        ),
+      );
+
+
+    this.aura.rotation.x =
+      -Math.PI /
+      2;
+
+
+    this.aura.position.y =
+      .05;
+
+
+    this.group.add(
+      this.aura,
     );
 
 
@@ -5153,6 +5591,54 @@ class DropVisual {
       )
       *
       .08;
+
+
+    const pulse =
+      1
+      +
+      Math.sin(
+        time *
+        4
+        +
+        this.drop.z,
+      )
+      *
+      .1;
+
+
+    this.aura.scale.setScalar(
+      pulse,
+    );
+
+
+    this.aura.material.opacity =
+      .3
+      +
+      (
+        Math.sin(
+          time *
+          4
+          +
+          this.drop.x,
+        )
+        *
+        .5
+        +
+        .5
+      )
+      *
+      .25;
+
+
+    this.sprite.material.rotation =
+      Math.sin(
+        time *
+        2.2
+        +
+        this.drop.x,
+      )
+      *
+      .035;
   }
 }
 
@@ -9658,14 +10144,40 @@ async function connect() {
 
       (
         message,
-      ) =>
+      ) => {
+
+        const visual =
+          players.get(
+            localSessionId,
+          );
+
+
+        visual?.hit();
+
+
+        if (
+          visual
+        ) {
+
+          playPlayerDamage(
+            visual.group.position,
+            Number(
+              message?.damage,
+            )
+            ||
+            0,
+          );
+        }
+
+
         showToast(
           `-${
             message?.damage
           } HP · ${
             message?.enemy
           }`,
-        ),
+        );
+      },
     );
 
 
@@ -10192,6 +10704,23 @@ addEventListener(
       &&
       !activeModal
     ) {
+
+      const localVisual =
+        players.get(
+          localSessionId,
+        );
+
+
+      if (
+        localVisual
+      ) {
+
+        playAttackEffect(
+          localVisual.group.position,
+          localVisual.direction,
+        );
+      }
+
 
       room?.send(
         "attack",
@@ -11835,7 +12364,20 @@ function animate() {
     of enemies.values()
   ) {
 
-    visual.update();
+    visual.update(
+      elapsed,
+    );
+  }
+
+
+  for (
+    const visual
+    of resources.values()
+  ) {
+
+    visual.update(
+      elapsed,
+    );
   }
 
 
@@ -11908,6 +12450,14 @@ function animate() {
         Date.now(),
 
       currentCave,
+    },
+  );
+
+
+  updateVisualEffects(
+    {
+      camera,
+      elapsed,
     },
   );
 
