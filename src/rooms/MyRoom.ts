@@ -71,6 +71,16 @@ import {
 } from "../shared/regionalProgression";
 
 import {
+  CARAVAN,
+  caravanMarketForSource,
+  caravanPositionAt,
+  outpostServiceOpenAt,
+  regionalMarketOpenAt,
+  regionalNpcLifeAt,
+  worldClockAt,
+} from "../shared/regionalLife";
+
+import {
   loadWorldSave,
   saveWorldSave,
   snapshotFarmPlots,
@@ -1454,7 +1464,7 @@ export class MyRoom
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 13:",
+      "🌎 Sandbox Online Etapa 14:",
       this.roomId,
     );
 
@@ -4583,7 +4593,7 @@ export class MyRoom
     ) {
 
       const position =
-        regionalNpcPositionAt(
+        regionalNpcLifeAt(
           id,
           now,
         );
@@ -5015,6 +5025,61 @@ export class MyRoom
 
 
     /*
+     * ETAPA 14
+     * CARAVANA ITINERANTE
+     */
+
+    const caravan =
+      caravanPositionAt(
+        Date.now(),
+      );
+
+
+    if (
+      Math.hypot(
+        player.x -
+        caravan.x,
+
+        player.z -
+        caravan.z,
+      )
+      <=
+      2.8
+    ) {
+
+      if (
+        !caravan.marketOpen
+      ) {
+
+        client.send(
+          "toast",
+
+          {
+            text:
+              "🌙 A Caravana do Miro está descansando.",
+          },
+        );
+
+
+        return;
+      }
+
+
+      client.send(
+        "open-shop",
+
+        {
+          source:
+            CARAVAN.id,
+        },
+      );
+
+
+      return;
+    }
+
+
+    /*
      * SERVIÇOS DOS POSTOS
      */
 
@@ -5048,6 +5113,35 @@ export class MyRoom
         type ===
         "shop"
       ) {
+
+        if (
+          !outpostServiceOpenAt(
+            outpostService.id,
+            Date.now(),
+          )
+        ) {
+
+          const clock =
+            worldClockAt(
+              Date.now(),
+            );
+
+
+          client.send(
+            "toast",
+
+            {
+              text:
+                `🔒 Comércio fechado · ${
+                  clock.label
+                }`,
+            },
+          );
+
+
+          return;
+        }
+
 
         client.send(
           "open-shop",
@@ -5121,6 +5215,13 @@ export class MyRoom
       regionalNpc
     ) {
 
+      const life =
+        regionalNpcLifeAt(
+          regionalNpc.id,
+          Date.now(),
+        );
+
+
       client.send(
         "open-regional-dialog",
 
@@ -5142,6 +5243,21 @@ export class MyRoom
 
           tip:
             regionalNpc.npc.tip,
+
+          status:
+            life?.status
+            ||
+            "",
+
+          marketOpen:
+            Boolean(
+              life?.marketOpen,
+            ),
+
+          worldTime:
+            life?.clock?.label
+            ||
+            "",
         },
       );
 
@@ -6831,6 +6947,35 @@ export class MyRoom
     }
 
 
+    if (
+      !regionalMarketOpenAt(
+        requested,
+        Date.now(),
+      )
+    ) {
+
+      const clock =
+        worldClockAt(
+          Date.now(),
+        );
+
+
+      client.send(
+        "toast",
+
+        {
+          text:
+            `🔒 Mercado fechado · ${
+              clock.label
+            }`,
+        },
+      );
+
+
+      return;
+    }
+
+
     const nearest =
       this.findNearestRegionalNpc(
         player.x,
@@ -6874,6 +7019,56 @@ export class MyRoom
       );
 
 
+    const caravanMarket =
+      caravanMarketForSource(
+        source,
+      );
+
+
+    if (
+      caravanMarket
+    ) {
+
+      const caravan =
+        caravanPositionAt(
+          Date.now(),
+        );
+
+
+      if (
+        !caravan.marketOpen
+        ||
+        Math.hypot(
+          player.x -
+          caravan.x,
+
+          player.z -
+          caravan.z,
+        )
+        >
+        3.4
+      ) {
+
+        return null;
+      }
+
+
+      return {
+
+        regional:
+          false,
+
+        caravan:
+          true,
+
+        source,
+
+        market:
+          caravanMarket,
+      };
+    }
+
+
     const regionalMarket =
       regionalMarketForSource(
         source,
@@ -6883,6 +7078,17 @@ export class MyRoom
     if (
       regionalMarket
     ) {
+
+      if (
+        !regionalMarketOpenAt(
+          regionalMarket.id,
+          Date.now(),
+        )
+      ) {
+
+        return null;
+      }
+
 
       /*
        * Comércio físico do Posto do Prado.
@@ -6925,7 +7131,7 @@ export class MyRoom
       else {
 
         const position =
-          regionalNpcPositionAt(
+          regionalNpcLifeAt(
             source,
             Date.now(),
           );
@@ -7000,6 +7206,27 @@ export class MyRoom
     itemId,
     mode,
   ) {
+
+    if (
+      context?.caravan
+    ) {
+
+      return Math.max(
+        0,
+
+        Number(
+          context
+            .market?.[
+              mode
+            ]?.[
+              itemId
+            ],
+        )
+        ||
+        0,
+      );
+    }
+
 
     if (
       !context?.regional
@@ -7203,6 +7430,8 @@ export class MyRoom
 
       if (
         context.regional
+        ||
+        context.caravan
       ) {
 
         for (

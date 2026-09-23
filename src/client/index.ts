@@ -52,6 +52,17 @@ import {
   regionalEventAt,
 } from "../shared/regionalProgression";
 
+import {
+  CARAVAN,
+  caravanMarketForSource,
+  caravanPositionAt,
+  eventWorldStateAt,
+  outpostServiceOpenAt,
+  regionalMarketOpenAt,
+  regionalNpcLifeAt,
+  worldClockAt,
+} from "../shared/regionalLife";
+
 
 const EQUIPMENT_LABELS = {
 
@@ -1709,7 +1720,7 @@ function nearestRegionalNpc(
   ) {
 
     const position =
-      regionalNpcPositionAt(
+      regionalNpcLifeAt(
         id,
         now,
       );
@@ -3356,6 +3367,262 @@ function buildRegionalNpcVisuals() {
 }
 
 
+
+/*
+ * ============================================================
+ * ETAPA 14 — CARAVANA + EVENTO VISUAL
+ * ============================================================
+ */
+
+let caravanVisual =
+  null;
+
+
+let eventWorldVisual =
+  null;
+
+
+function buildRegionalLifeVisuals() {
+
+  /*
+   * CARAVANA
+   */
+
+  const caravanGroup =
+    new THREE.Group();
+
+
+  caravanGroup.add(
+    shadow(
+      .8,
+    ),
+  );
+
+
+  caravanGroup.add(
+    makeSprite(
+      simpleTexture(
+        CARAVAN.visualKind,
+      ),
+
+      2.2,
+
+      3,
+    ),
+  );
+
+
+  /*
+   * Duas caixas simples para dar aparência de caravana.
+   */
+
+  const crateMaterial =
+    new THREE.MeshBasicMaterial(
+      {
+        color:
+          0x7d5835,
+      },
+    );
+
+
+  const crateA =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        .6,
+        .6,
+        .6,
+      ),
+
+      crateMaterial,
+    );
+
+
+  crateA.position.set(
+    -.7,
+    .3,
+    .2,
+  );
+
+
+  caravanGroup.add(
+    crateA,
+  );
+
+
+  const crateB =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        .5,
+        .5,
+        .5,
+      ),
+
+      crateMaterial,
+    );
+
+
+  crateB.position.set(
+    .7,
+    .25,
+    .1,
+  );
+
+
+  caravanGroup.add(
+    crateB,
+  );
+
+
+  scene.add(
+    caravanGroup,
+  );
+
+
+  const caravanLabel =
+    document.createElement(
+      "div",
+    );
+
+
+  caravanLabel.className =
+    "world-label npc";
+
+
+  caravanLabel.textContent =
+    `${CARAVAN.name} · ${CARAVAN.role}`;
+
+
+  document.body.appendChild(
+    caravanLabel,
+  );
+
+
+  caravanVisual = {
+
+    group:
+      caravanGroup,
+
+    label:
+      caravanLabel,
+  };
+
+
+  /*
+   * MARCADOR FÍSICO DO EVENTO ATIVO
+   */
+
+  const eventGroup =
+    new THREE.Group();
+
+
+  const ring =
+    new THREE.Mesh(
+
+      new THREE.RingGeometry(
+        .9,
+        1.15,
+        24,
+      ),
+
+      new THREE.MeshBasicMaterial(
+        {
+          color:
+            0xe5b43c,
+
+          transparent:
+            true,
+
+          opacity:
+            .85,
+
+          side:
+            THREE.DoubleSide,
+        },
+      ),
+    );
+
+
+  ring.rotation.x =
+    -Math.PI /
+    2;
+
+
+  ring.position.y =
+    .06;
+
+
+  eventGroup.add(
+    ring,
+  );
+
+
+  const beacon =
+    new THREE.Mesh(
+
+      new THREE.CylinderGeometry(
+        .08,
+        .08,
+        3.5,
+        8,
+      ),
+
+      new THREE.MeshBasicMaterial(
+        {
+          color:
+            0xf0c94e,
+
+          transparent:
+            true,
+
+          opacity:
+            .55,
+        },
+      ),
+    );
+
+
+  beacon.position.y =
+    1.75;
+
+
+  eventGroup.add(
+    beacon,
+  );
+
+
+  scene.add(
+    eventGroup,
+  );
+
+
+  const eventLabel =
+    document.createElement(
+      "div",
+    );
+
+
+  eventLabel.className =
+    "world-label npc";
+
+
+  document.body.appendChild(
+    eventLabel,
+  );
+
+
+  eventWorldVisual = {
+
+    group:
+      eventGroup,
+
+    ring,
+
+    label:
+      eventLabel,
+  };
+}
+
+
 function buildWorld() {
 
   const grass =
@@ -3715,6 +3982,8 @@ buildRegionVisuals();
 buildLandmarkVisuals();
 
 buildRegionalNpcVisuals();
+
+buildRegionalLifeVisuals();
 
 addAdvancedFishingSpots();
 
@@ -5590,8 +5859,24 @@ function updateRegionHud() {
     );
 
 
+  const clock =
+    worldClockAt(
+      Date.now(),
+    );
+
+
+  const hudKey =
+    `${
+      id
+    }:${
+      clock.hour
+    }:${
+      clock.minute
+    }`;
+
+
   if (
-    id ===
+    hudKey ===
     lastRegionHud
   ) {
 
@@ -5600,7 +5885,7 @@ function updateRegionHud() {
 
 
   lastRegionHud =
-    id;
+    hudKey;
 
 
   const region =
@@ -5627,9 +5912,14 @@ function updateRegionHud() {
 
       <small>
         Recomendado Nv.${region.recommendedLevel}
+        · ${clock.icon} ${clock.label}
+        · ${clock.phaseLabel}
       </small>
     `;
 }
+
+
+
 
 
 
@@ -5658,6 +5948,26 @@ function renderRegionMap() {
       : "village";
 
 
+  const clock =
+    worldClockAt(
+      Date.now(),
+    );
+
+
+  const caravan =
+    caravanPositionAt(
+      Date.now(),
+    );
+
+
+  const caravanRegion =
+    REGIONS[
+      caravan.region
+    ]?.label
+    ||
+    "estrada";
+
+
   regionMapSummary.textContent =
     `${
       knownRegions.size
@@ -5667,7 +5977,13 @@ function renderRegionMap() {
       knownLandmarks.size
     } / ${
       LANDMARK_ORDER.length
-    } pontos de interesse`;
+    } pontos de interesse · ${
+      clock.icon
+    } ${
+      clock.label
+    } · 🚚 Miro: ${
+      caravanRegion
+    }`;
 
 
   regionMapList.innerHTML =
@@ -7097,6 +7413,12 @@ function renderShopMarket(
     );
 
 
+  const caravanMarket =
+    caravanMarketForSource(
+      activeShopSource,
+    );
+
+
   const regional =
     regionalMarketForSource(
       activeShopSource,
@@ -7121,6 +7443,25 @@ function renderShopMarket(
 
 
   if (
+    caravanMarket
+  ) {
+
+    data =
+      caravanMarket;
+
+
+    shopEyebrow.textContent =
+      caravanMarket
+        .eyebrow
+        .toUpperCase();
+
+
+    shopHeading.textContent =
+      caravanMarket.label;
+  }
+
+
+  else if (
     regional
   ) {
 
@@ -8618,12 +8959,33 @@ async function connect() {
           "...";
 
 
-        regionalDialogTip.textContent =
-          message?.tip
-            ? `💡 ${
-                message.tip
+        const statusText =
+          message?.status
+            ? ` · 🕒 ${
+                message.status
               }`
             : "";
+
+
+        const marketText =
+          message?.marketOpen ===
+          false
+            ? " · 🔒 mercado fechado"
+            : "";
+
+
+        regionalDialogTip.textContent =
+          `${
+            message?.tip
+              ? `💡 ${
+                  message.tip
+                }`
+              : ""
+          }${
+            statusText
+          }${
+            marketText
+          }`;
 
 
         const market =
@@ -8634,6 +8996,9 @@ async function connect() {
 
         regionalDialogMarketButton.style.display =
           market
+          &&
+          message?.marketOpen !==
+          false
             ? "block"
             : "none";
 
@@ -9663,6 +10028,42 @@ function updateInteraction() {
 
 
 
+  const caravan =
+    caravanPositionAt(
+      Date.now(),
+    );
+
+
+  if (
+    Math.hypot(
+      localPlayer.x -
+      caravan.x,
+
+      localPlayer.z -
+      caravan.z,
+    )
+    <=
+    2.8
+  ) {
+
+    interaction.textContent =
+      caravan.marketOpen
+        ? `[ E ] 🚚 Negociar com ${
+            CARAVAN.name
+          }`
+        : `[ E ] 🌙 ${
+            CARAVAN.name
+          } · descansando`;
+
+
+    interaction.style.display =
+      "block";
+
+
+    return;
+  }
+
+
   const outpostService =
     nearestOutpostService(
       localPlayer.x,
@@ -9675,12 +10076,25 @@ function updateInteraction() {
     outpostService
   ) {
 
+    const serviceOpen =
+      outpostServiceOpenAt(
+        outpostService.id,
+        Date.now(),
+      );
+
+
     interaction.textContent =
-      `[ E ] 🔧 ${
-        outpostService
-          .service
-          .label
-      }`;
+      serviceOpen
+        ? `[ E ] 🔧 ${
+            outpostService
+              .service
+              .label
+          }`
+        : `[ E ] 🔒 ${
+            outpostService
+              .service
+              .label
+          } · fechado`;
 
 
     interaction.style.display =
@@ -10032,6 +10446,10 @@ function updateRegionalNpcVisuals() {
     Date.now();
 
 
+  /*
+   * NPCs REGIONAIS
+   */
+
   for (
     const [
       id,
@@ -10040,15 +10458,15 @@ function updateRegionalNpcVisuals() {
     of regionalNpcVisuals
   ) {
 
-    const position =
-      regionalNpcPositionAt(
+    const life =
+      regionalNpcLifeAt(
         id,
         now,
       );
 
 
     if (
-      !position
+      !life
     ) {
 
       continue;
@@ -10056,12 +10474,128 @@ function updateRegionalNpcVisuals() {
 
 
     visual.group.position.set(
-      position.x,
+      life.x,
       0,
-      position.z,
+      life.z,
     );
+
+
+    visual.label.textContent =
+      `${
+        visual.npc.name
+      } · ${
+        life.status
+      }`;
+  }
+
+
+  /*
+   * CARAVANA
+   */
+
+  if (
+    caravanVisual
+  ) {
+
+    const caravan =
+      caravanPositionAt(
+        now,
+      );
+
+
+    caravanVisual
+      .group
+      .position
+      .set(
+        caravan.x,
+        0,
+        caravan.z,
+      );
+
+
+    caravanVisual
+      .label
+      .textContent =
+      `${
+        CARAVAN.name
+      } · ${
+        caravan.status
+      }`;
+  }
+
+
+  /*
+   * EVENTO VISÍVEL NO MUNDO
+   */
+
+  if (
+    eventWorldVisual
+  ) {
+
+    const event =
+      eventWorldStateAt(
+        now,
+      );
+
+
+    if (
+      event
+    ) {
+
+      eventWorldVisual
+        .group
+        .visible =
+        true;
+
+
+      eventWorldVisual
+        .group
+        .position
+        .set(
+          event.x,
+          0,
+          event.z,
+        );
+
+
+      const pulse =
+        1
+        +
+        Math.sin(
+          now /
+          350,
+        )
+        *
+        .12;
+
+
+      eventWorldVisual
+        .ring
+        .scale
+        .set(
+          pulse,
+          pulse,
+          pulse,
+        );
+
+
+      eventWorldVisual
+        .label
+        .textContent =
+        `⚠ ${event.title}`;
+    }
+
+    else {
+
+      eventWorldVisual
+        .group
+        .visible =
+        false;
+    }
   }
 }
+
+
 
 
 function updateLabels() {
@@ -10173,6 +10707,52 @@ function updateLabels() {
 
     projectLabel(
       visual.label,
+      position,
+    );
+  }
+
+
+  if (
+    caravanVisual
+  ) {
+
+    const position =
+      caravanVisual
+        .group
+        .position
+        .clone();
+
+
+    position.y +=
+      3.25;
+
+
+    projectLabel(
+      caravanVisual.label,
+      position,
+    );
+  }
+
+
+  if (
+    eventWorldVisual
+    &&
+    eventWorldVisual.group.visible
+  ) {
+
+    const position =
+      eventWorldVisual
+        .group
+        .position
+        .clone();
+
+
+    position.y +=
+      4.2;
+
+
+    projectLabel(
+      eventWorldVisual.label,
       position,
     );
   }
