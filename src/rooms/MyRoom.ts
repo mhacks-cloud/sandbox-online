@@ -81,6 +81,13 @@ import {
 } from "../shared/regionalLife";
 
 import {
+  CAVES,
+  CAVE_RESOURCE_LAYOUT,
+  CAVE_ENEMY_LAYOUT,
+  nearestCaveEntrance,
+} from "../shared/caves";
+
+import {
   loadWorldSave,
   saveWorldSave,
   snapshotFarmPlots,
@@ -1195,6 +1202,23 @@ export class MyRoom
     new Map();
 
 
+  /*
+   * ETAPA 15
+   *
+   * A caverna atual fica FORA do Schema.
+   *
+   * Isso evita modificar o Player e também permite
+   * salvar a posição externa caso o servidor reinicie.
+   */
+
+  playerCaves =
+    new Map();
+
+
+  caveChestClaims =
+    new Map();
+
+
   dropCounter =
     0;
 
@@ -1464,7 +1488,7 @@ export class MyRoom
   onCreate() {
 
     console.log(
-      "🌎 Sandbox Online Etapa 14:",
+      "🌎 Sandbox Online Etapa 15:",
       this.roomId,
     );
 
@@ -1510,7 +1534,10 @@ export class MyRoom
         x,
         z,
       ]
-      of RESOURCE_LAYOUT
+      of [
+        ...RESOURCE_LAYOUT,
+        ...CAVE_RESOURCE_LAYOUT,
+      ]
     ) {
 
       const config =
@@ -1568,7 +1595,10 @@ export class MyRoom
         x,
         z,
       ]
-      of ENEMY_LAYOUT
+      of [
+        ...ENEMY_LAYOUT,
+        ...CAVE_ENEMY_LAYOUT,
+      ]
     ) {
 
       const config =
@@ -2539,6 +2569,20 @@ export class MyRoom
           EMPTY_INPUT;
 
 
+        const caveState =
+          this.playerCaves.get(
+            sessionId,
+          );
+
+
+        const activeCave =
+          caveState
+            ? CAVES[
+                caveState.id
+              ]
+            : null;
+
+
         const moving =
           Math.abs(
             input.moveX,
@@ -2561,11 +2605,42 @@ export class MyRoom
           moving
         ) {
 
+          const bounds =
+            activeCave
+              ?.interior
+              ?.bounds;
+
+
+          const minX =
+            bounds?.minX
+            ??
+            -WORLD_BOUNDS;
+
+
+          const maxX =
+            bounds?.maxX
+            ??
+            WORLD_BOUNDS;
+
+
+          const minZ =
+            bounds?.minZ
+            ??
+            -WORLD_BOUNDS;
+
+
+          const maxZ =
+            bounds?.maxZ
+            ??
+            WORLD_BOUNDS;
+
+
           player.x =
             Math.max(
-              -WORLD_BOUNDS,
+              minX,
+
               Math.min(
-                WORLD_BOUNDS,
+                maxX,
 
                 player.x
                 +
@@ -2578,9 +2653,10 @@ export class MyRoom
 
           player.z =
             Math.max(
-              -WORLD_BOUNDS,
+              minZ,
+
               Math.min(
-                WORLD_BOUNDS,
+                maxZ,
 
                 player.z
                 +
@@ -2599,16 +2675,26 @@ export class MyRoom
         }
 
 
-        this.updatePlayerRegion(
-          player,
-          sessionId,
-        );
+        /*
+         * Coordenadas subterrâneas ficam fora do mapa regional.
+         * Não registramos a caverna como Vila do Vale.
+         */
+
+        if (
+          !activeCave
+        ) {
+
+          this.updatePlayerRegion(
+            player,
+            sessionId,
+          );
 
 
-        this.updatePlayerLandmarks(
-          player,
-          sessionId,
-        );
+          this.updatePlayerLandmarks(
+            player,
+            sessionId,
+          );
+        }
       },
     );
 
@@ -3600,6 +3686,43 @@ export class MyRoom
       1;
 
 
+    const diedInCave =
+      this.playerCaves.has(
+        sessionId,
+      );
+
+
+    if (
+      diedInCave
+    ) {
+
+      this.playerCaves.delete(
+        sessionId,
+      );
+
+
+      this.clients
+        .find(
+          (
+            client,
+          ) =>
+            client.sessionId ===
+            sessionId,
+        )
+        ?.send(
+          "cave-state",
+
+          {
+            active:
+              false,
+
+            reason:
+              "death",
+          },
+        );
+    }
+
+
     this.enemyTargets.forEach(
       (
         target,
@@ -4234,6 +4357,29 @@ export class MyRoom
     }
 
 
+    if (
+      this.playerCaves.has(
+        client.sessionId,
+      )
+    ) {
+
+      client.send(
+        "travel-jump-result",
+
+        {
+          ok:
+            false,
+
+          reason:
+            "inside-cave",
+        },
+      );
+
+
+      return;
+    }
+
+
     const target =
       String(
         payload?.target
@@ -4838,6 +4984,590 @@ export class MyRoom
 
 
 
+  getPlayerCave(
+    sessionId,
+  ) {
+
+    const state =
+      this.playerCaves.get(
+        sessionId,
+      );
+
+
+    if (
+      !state
+    ) {
+
+      return null;
+    }
+
+
+    const cave =
+      CAVES[
+        state.id
+      ];
+
+
+    if (
+      !cave
+    ) {
+
+      this.playerCaves.delete(
+        sessionId,
+      );
+
+
+      return null;
+    }
+
+
+    return {
+
+      state,
+
+      cave,
+    };
+  }
+
+
+  enterCave(
+    client,
+    player,
+    cave,
+  ) {
+
+    if (
+      this.playerCaves.has(
+        client.sessionId,
+      )
+    ) {
+
+      return;
+    }
+
+
+    if (
+      player.level <
+      (
+        cave.minLevel
+        ||
+        1
+      )
+    ) {
+
+      client.send(
+        "toast",
+
+        {
+          text:
+            `🔒 ${
+              cave.label
+            } requer nível ${
+              cave.minLevel
+            }.`,
+        },
+      );
+
+
+      return;
+    }
+
+
+    this.playerCaves.set(
+      client.sessionId,
+
+      {
+        id:
+          cave.id,
+
+        returnX:
+          cave.returnPoint.x,
+
+        returnZ:
+          cave.returnPoint.z,
+      },
+    );
+
+
+    player.x =
+      cave
+        .interior
+        .spawn
+        .x;
+
+
+    player.z =
+      cave
+        .interior
+        .spawn
+        .z;
+
+
+    player.moving =
+      false;
+
+
+    this.playerInputs.set(
+      client.sessionId,
+
+      {
+        ...EMPTY_INPUT,
+      },
+    );
+
+
+    client.send(
+      "cave-state",
+
+      {
+        active:
+          true,
+
+        id:
+          cave.id,
+
+        label:
+          cave.label,
+
+        subtitle:
+          cave.subtitle,
+
+        recommendedLevel:
+          cave.recommendedLevel,
+      },
+    );
+
+
+    /*
+     * persist() salva o ponto EXTERNO enquanto o
+     * jogador estiver dentro da caverna.
+     */
+
+    this.persist(
+      client.sessionId,
+      true,
+    );
+
+
+    console.log(
+      `🕳 ${
+        player.name
+      } entrou em ${
+        cave.label
+      }`,
+    );
+  }
+
+
+  leaveCave(
+    client,
+    player,
+  ) {
+
+    const current =
+      this.getPlayerCave(
+        client.sessionId,
+      );
+
+
+    if (
+      !current
+    ) {
+
+      return;
+    }
+
+
+    const {
+      cave,
+      state,
+    } =
+      current;
+
+
+    /*
+     * Remove primeiro o estado de caverna.
+     *
+     * Assim o próximo save grava a posição externa.
+     */
+
+    this.playerCaves.delete(
+      client.sessionId,
+    );
+
+
+    player.x =
+      state.returnX;
+
+
+    player.z =
+      state.returnZ;
+
+
+    player.moving =
+      false;
+
+
+    this.playerInputs.set(
+      client.sessionId,
+
+      {
+        ...EMPTY_INPUT,
+      },
+    );
+
+
+    this.playerRegions.delete(
+      client.sessionId,
+    );
+
+
+    this.updatePlayerRegion(
+      player,
+      client.sessionId,
+    );
+
+
+    this.updatePlayerLandmarks(
+      player,
+      client.sessionId,
+    );
+
+
+    this.persist(
+      client.sessionId,
+      true,
+    );
+
+
+    client.send(
+      "cave-state",
+
+      {
+        active:
+          false,
+
+        id:
+          cave.id,
+
+        label:
+          cave.label,
+      },
+    );
+
+
+    console.log(
+      `🌤 ${
+        player.name
+      } saiu de ${
+        cave.label
+      }`,
+    );
+  }
+
+
+  openCaveChest(
+    client,
+    player,
+    cave,
+  ) {
+
+    const profile =
+      this.profiles.get(
+        client.sessionId,
+      )
+      ||
+      client.sessionId;
+
+
+    const key =
+      `${
+        profile
+      }:${
+        cave.id
+      }`;
+
+
+    const now =
+      Date.now();
+
+
+    const availableAt =
+      this.caveChestClaims.get(
+        key,
+      )
+      ||
+      0;
+
+
+    if (
+      availableAt >
+      now
+    ) {
+
+      const seconds =
+        Math.ceil(
+          (
+            availableAt -
+            now
+          )
+          /
+          1000,
+        );
+
+
+      client.send(
+        "toast",
+
+        {
+          text:
+            `📦 Baú vazio · retorna em ${
+              seconds
+            }s.`,
+        },
+      );
+
+
+      return;
+    }
+
+
+    const loot =
+      cave
+        .chest
+        .loot[
+          Math.floor(
+            Math.random()
+            *
+            cave.chest.loot.length
+          )
+        ];
+
+
+    const amount =
+      loot.min
+      +
+      Math.floor(
+        Math.random()
+        *
+        (
+          loot.max -
+          loot.min +
+          1
+        ),
+      );
+
+
+    const gold =
+      cave.chest.gold.min
+      +
+      Math.floor(
+        Math.random()
+        *
+        (
+          cave.chest.gold.max
+          -
+          cave.chest.gold.min
+          +
+          1
+        ),
+      );
+
+
+    const inventory =
+      this.getInventory(
+        player,
+      );
+
+
+    const remaining =
+      addItem(
+        inventory,
+        loot.id,
+        amount,
+        "common",
+      );
+
+
+    const received =
+      amount -
+      remaining;
+
+
+    this.setInventory(
+      player,
+      inventory,
+    );
+
+
+    player.gold +=
+      gold;
+
+
+    this.addXp(
+      player,
+      cave.chest.xp,
+    );
+
+
+    this.caveChestClaims.set(
+      key,
+
+      now
+      +
+      cave.chest.cooldownMs,
+    );
+
+
+    this.persist(
+      client.sessionId,
+      true,
+    );
+
+
+    const item =
+      ITEM_CATALOG[
+        loot.id
+      ];
+
+
+    client.send(
+      "toast",
+
+      {
+        text:
+          `📦 Tesouro: +${
+            gold
+          } ouro · +${
+            cave.chest.xp
+          } XP${
+            received > 0
+              ? ` · ${
+                  received
+                } ${
+                  item?.label
+                  ||
+                  loot.id
+                }`
+              : " · inventário cheio"
+          }`,
+      },
+    );
+  }
+
+
+  handleCaveInteraction(
+    client,
+    player,
+  ) {
+
+    const current =
+      this.getPlayerCave(
+        client.sessionId,
+      );
+
+
+    /*
+     * JÁ ESTÁ DENTRO
+     */
+
+    if (
+      current
+    ) {
+
+      const {
+        cave,
+      } =
+        current;
+
+
+      const exitDistance =
+        Math.hypot(
+          player.x -
+          cave.interior.exit.x,
+
+          player.z -
+          cave.interior.exit.z,
+        );
+
+
+      if (
+        exitDistance <=
+        cave.interior.exit.radius
+      ) {
+
+        this.leaveCave(
+          client,
+          player,
+        );
+
+
+        return true;
+      }
+
+
+      const chestDistance =
+        Math.hypot(
+          player.x -
+          cave.chest.x,
+
+          player.z -
+          cave.chest.z,
+        );
+
+
+      if (
+        chestDistance <=
+        cave.chest.radius
+      ) {
+
+        this.openCaveChest(
+          client,
+          player,
+          cave,
+        );
+
+
+        return true;
+      }
+
+
+      return false;
+    }
+
+
+    /*
+     * ESTÁ NO MUNDO EXTERNO
+     */
+
+    const entrance =
+      nearestCaveEntrance(
+        player.x,
+        player.z,
+        3,
+      );
+
+
+    if (
+      !entrance
+    ) {
+
+      return false;
+    }
+
+
+    this.enterCave(
+      client,
+      player,
+      entrance.cave,
+    );
+
+
+    return true;
+  }
+
+
+
   interact(
     client,
     payload,
@@ -4867,6 +5597,21 @@ export class MyRoom
         ||
         "",
       );
+
+
+    /*
+     * ETAPA 15 — CAVERNAS
+     */
+
+    if (
+      this.handleCaveInteraction(
+        client,
+        player,
+      )
+    ) {
+
+      return;
+    }
 
 
     /*
@@ -9335,6 +10080,11 @@ export class MyRoom
     );
 
 
+    this.playerCaves.delete(
+      client.sessionId,
+    );
+
+
     this.state.players.delete(
       client.sessionId,
     );
@@ -10293,21 +11043,39 @@ export class MyRoom
     ) return;
 
 
+    const caveState =
+      this.playerCaves.get(
+        sessionId,
+      );
+
+
+    const saveX =
+      caveState?.returnX
+      ??
+      player.x;
+
+
+    const saveZ =
+      caveState?.returnZ
+      ??
+      player.z;
+
+
     this.saves[
       profile
     ] = {
 
       saveVersion:
-        13,
+        15,
 
       name:
         player.name,
 
       x:
-        player.x,
+        saveX,
 
       z:
-        player.z,
+        saveZ,
 
       hp:
         player.hp,

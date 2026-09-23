@@ -63,6 +63,12 @@ import {
   worldClockAt,
 } from "../shared/regionalLife";
 
+import {
+  CAVE_ORDER,
+  CAVES,
+  nearestCaveEntrance,
+} from "../shared/caves";
+
 
 const EQUIPMENT_LABELS = {
 
@@ -3623,6 +3629,703 @@ function buildRegionalLifeVisuals() {
 }
 
 
+
+/*
+ * ============================================================
+ * ETAPA 15 — VISUAL DAS CAVERNAS
+ * ============================================================
+ */
+
+function buildCaveVisuals() {
+
+  for (
+    const caveId
+    of CAVE_ORDER
+  ) {
+
+    const cave =
+      CAVES[
+        caveId
+      ];
+
+
+    if (
+      !cave
+    ) {
+
+      continue;
+    }
+
+
+    /*
+     * ENTRADA NO MUNDO EXTERNO
+     */
+
+    const entrance =
+      new THREE.Group();
+
+
+    const dark =
+      new THREE.Mesh(
+
+        new THREE.CircleGeometry(
+          1.25,
+          20,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              0x171719,
+          },
+        ),
+      );
+
+
+    dark.rotation.x =
+      -Math.PI /
+      2;
+
+
+    dark.scale.set(
+      1,
+      .65,
+      1,
+    );
+
+
+    dark.position.y =
+      .04;
+
+
+    entrance.add(
+      dark,
+    );
+
+
+    const stoneMaterial =
+      new THREE.MeshBasicMaterial(
+        {
+          color:
+            caveId ===
+            "silver_grotto"
+              ? 0x697783
+              : 0x574a40,
+        },
+      );
+
+
+    for (
+      const data
+      of [
+        [
+          -.95,
+          .75,
+          0,
+          .45,
+          1.5,
+          .55,
+        ],
+        [
+          .95,
+          .75,
+          0,
+          .45,
+          1.5,
+          .55,
+        ],
+        [
+          0,
+          1.55,
+          0,
+          2.25,
+          .38,
+          .55,
+        ],
+      ]
+    ) {
+
+      const stone =
+        new THREE.Mesh(
+
+          new THREE.BoxGeometry(
+            data[3],
+            data[4],
+            data[5],
+          ),
+
+          stoneMaterial,
+        );
+
+
+      stone.position.set(
+        data[0],
+        data[1],
+        data[2],
+      );
+
+
+      entrance.add(
+        stone,
+      );
+    }
+
+
+    entrance.position.set(
+      cave.entrance.x,
+      0,
+      cave.entrance.z,
+    );
+
+
+    scene.add(
+      entrance,
+    );
+
+
+    addLabel(
+      `🕳 ${
+        cave.label
+      } · Nv.${
+        cave.recommendedLevel
+      }`,
+      cave.entrance.x,
+      cave.entrance.z,
+      2.5,
+    );
+
+
+    /*
+     * INTERIOR
+     */
+
+    const bounds =
+      cave
+        .interior
+        .bounds;
+
+
+    const width =
+      bounds.maxX -
+      bounds.minX;
+
+
+    const depth =
+      bounds.maxZ -
+      bounds.minZ;
+
+
+    const centerX =
+      (
+        bounds.minX
+        +
+        bounds.maxX
+      )
+      /
+      2;
+
+
+    const centerZ =
+      (
+        bounds.minZ
+        +
+        bounds.maxZ
+      )
+      /
+      2;
+
+
+    const floor =
+      new THREE.Mesh(
+
+        new THREE.PlaneGeometry(
+          width,
+          depth,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              caveId ===
+              "silver_grotto"
+                ? 0x303943
+                : 0x3d352f,
+          },
+        ),
+      );
+
+
+    floor.rotation.x =
+      -Math.PI /
+      2;
+
+
+    floor.position.set(
+      centerX,
+      -.02,
+      centerZ,
+    );
+
+
+    scene.add(
+      floor,
+    );
+
+
+    /*
+     * CAMINHO DE PEDRA
+     */
+
+    const path =
+      new THREE.Mesh(
+
+        new THREE.PlaneGeometry(
+          4,
+          depth -
+          3,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              caveId ===
+              "silver_grotto"
+                ? 0x46515d
+                : 0x51473f,
+          },
+        ),
+      );
+
+
+    path.rotation.x =
+      -Math.PI /
+      2;
+
+
+    path.position.set(
+      centerX,
+      .001,
+      centerZ,
+    );
+
+
+    scene.add(
+      path,
+    );
+
+
+    /*
+     * PAREDES
+     */
+
+    const wallMaterial =
+      new THREE.MeshBasicMaterial(
+        {
+          color:
+            caveId ===
+            "silver_grotto"
+              ? 0x4e5c68
+              : 0x4a4038,
+        },
+      );
+
+
+    const walls = [
+
+      {
+        x:
+          centerX,
+
+        z:
+          bounds.minZ,
+
+        w:
+          width,
+
+        d:
+          1,
+      },
+
+      {
+        x:
+          centerX,
+
+        z:
+          bounds.maxZ,
+
+        w:
+          width,
+
+        d:
+          1,
+      },
+
+      {
+        x:
+          bounds.minX,
+
+        z:
+          centerZ,
+
+        w:
+          1,
+
+        d:
+          depth,
+      },
+
+      {
+        x:
+          bounds.maxX,
+
+        z:
+          centerZ,
+
+        w:
+          1,
+
+        d:
+          depth,
+      },
+
+    ];
+
+
+    for (
+      const wallData
+      of walls
+    ) {
+
+      const wall =
+        new THREE.Mesh(
+
+          new THREE.BoxGeometry(
+            wallData.w,
+            2.4,
+            wallData.d,
+          ),
+
+          wallMaterial,
+        );
+
+
+      wall.position.set(
+        wallData.x,
+        1.2,
+        wallData.z,
+      );
+
+
+      scene.add(
+        wall,
+      );
+    }
+
+
+    /*
+     * PEDRAS DECORATIVAS
+     */
+
+    for (
+      const [
+        ox,
+        oz,
+        size,
+      ]
+      of [
+        [-9,-7,1.4],
+        [8,-5,1.1],
+        [-10,5,1.2],
+        [9,7,1.5],
+        [-5,-10,.9],
+        [6,9,.8],
+      ]
+    ) {
+
+      const rock =
+        new THREE.Mesh(
+
+          new THREE.DodecahedronGeometry(
+            size,
+            0,
+          ),
+
+          new THREE.MeshBasicMaterial(
+            {
+              color:
+                caveId ===
+                "silver_grotto"
+                  ? 0x617180
+                  : 0x5a4b42,
+            },
+          ),
+        );
+
+
+      rock.scale.y =
+        .65;
+
+
+      rock.position.set(
+        centerX + ox,
+        size * .45,
+        centerZ + oz,
+      );
+
+
+      scene.add(
+        rock,
+      );
+    }
+
+
+    /*
+     * BAÚ
+     */
+
+    const chest =
+      new THREE.Group();
+
+
+    const chestBase =
+      new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+          1.35,
+          .7,
+          .9,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              0x74512f,
+          },
+        ),
+      );
+
+
+    chestBase.position.y =
+      .35;
+
+
+    chest.add(
+      chestBase,
+    );
+
+
+    const chestTop =
+      new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+          1.35,
+          .35,
+          .9,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              0x8b6337,
+          },
+        ),
+      );
+
+
+    chestTop.position.y =
+      .85;
+
+
+    chest.add(
+      chestTop,
+    );
+
+
+    const lock =
+      new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+          .18,
+          .3,
+          .08,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              0xd0ad59,
+          },
+        ),
+      );
+
+
+    lock.position.set(
+      0,
+      .62,
+      .49,
+    );
+
+
+    chest.add(
+      lock,
+    );
+
+
+    chest.position.set(
+      cave.chest.x,
+      0,
+      cave.chest.z,
+    );
+
+
+    scene.add(
+      chest,
+    );
+
+
+    /*
+     * PORTAL / SAÍDA INTERNA
+     */
+
+    const exitMarker =
+      new THREE.Mesh(
+
+        new THREE.RingGeometry(
+          .75,
+          1,
+          20,
+        ),
+
+        new THREE.MeshBasicMaterial(
+          {
+            color:
+              0xc8b28a,
+
+            side:
+              THREE.DoubleSide,
+
+            transparent:
+              true,
+
+            opacity:
+              .7,
+          },
+        ),
+      );
+
+
+    exitMarker.rotation.x =
+      -Math.PI /
+      2;
+
+
+    exitMarker.position.set(
+      cave.interior.exit.x,
+      .05,
+      cave.interior.exit.z,
+    );
+
+
+    scene.add(
+      exitMarker,
+    );
+
+
+    /*
+     * TOCHAS SIMPLES
+     */
+
+    for (
+      const [
+        tx,
+        tz,
+      ]
+      of [
+        [centerX - 7, centerZ - 7],
+        [centerX + 7, centerZ - 7],
+        [centerX - 7, centerZ + 5],
+        [centerX + 7, centerZ + 5],
+      ]
+    ) {
+
+      const torch =
+        new THREE.Group();
+
+
+      const pole =
+        new THREE.Mesh(
+
+          new THREE.BoxGeometry(
+            .12,
+            1.2,
+            .12,
+          ),
+
+          new THREE.MeshBasicMaterial(
+            {
+              color:
+                0x5c402b,
+            },
+          ),
+        );
+
+
+      pole.position.y =
+        .6;
+
+
+      torch.add(
+        pole,
+      );
+
+
+      const flame =
+        new THREE.Mesh(
+
+          new THREE.SphereGeometry(
+            .22,
+            8,
+            8,
+          ),
+
+          new THREE.MeshBasicMaterial(
+            {
+              color:
+                caveId ===
+                "silver_grotto"
+                  ? 0x91c7df
+                  : 0xe5a847,
+            },
+          ),
+        );
+
+
+      flame.position.y =
+        1.35;
+
+
+      torch.add(
+        flame,
+      );
+
+
+      torch.position.set(
+        tx,
+        0,
+        tz,
+      );
+
+
+      scene.add(
+        torch,
+      );
+    }
+  }
+}
+
+
+
+
 function buildWorld() {
 
   const grass =
@@ -3984,6 +4687,8 @@ buildLandmarkVisuals();
 buildRegionalNpcVisuals();
 
 buildRegionalLifeVisuals();
+
+buildCaveVisuals();
 
 addAdvancedFishingSpots();
 
@@ -4570,6 +5275,15 @@ let activeRegionalNpc =
 
 let activeShopSource =
   "";
+
+
+/*
+ * ETAPA 15
+ */
+
+let currentCave =
+  "";
+
 
 let regionalProgressState = {
 
@@ -5849,6 +6563,58 @@ function updateRegionHud() {
   ) {
 
     return;
+  }
+
+
+  if (
+    currentCave
+  ) {
+
+    const cave =
+      CAVES[
+        currentCave
+      ];
+
+
+    if (
+      cave
+    ) {
+
+      const caveKey =
+        `cave:${
+          currentCave
+        }`;
+
+
+      if (
+        lastRegionHud ===
+        caveKey
+      ) {
+
+        return;
+      }
+
+
+      lastRegionHud =
+        caveKey;
+
+
+      regionBadge.innerHTML =
+        `
+          🕳
+
+          <strong>
+            ${cave.label}
+          </strong>
+
+          <small>
+            Subterrâneo · recomendado Nv.${cave.recommendedLevel}
+          </small>
+        `;
+
+
+      return;
+    }
   }
 
 
@@ -8483,6 +9249,76 @@ async function connect() {
 
 
     room.onMessage(
+      "cave-state",
+
+      (
+        message,
+      ) => {
+
+        const active =
+          Boolean(
+            message?.active,
+          );
+
+
+        currentCave =
+          active
+            ? String(
+                message?.id
+                ||
+                "",
+              )
+            : "";
+
+
+        lastRegionHud =
+          "";
+
+
+        closeModals();
+
+
+        if (
+          active
+        ) {
+
+          showToast(
+            `🕳 Entrando: ${
+              message?.label
+              ||
+              "Caverna"
+            }`,
+          );
+        }
+
+        else if (
+          message?.reason ===
+          "death"
+        ) {
+
+          showToast(
+            "💀 Você foi expulso da caverna.",
+          );
+        }
+
+        else {
+
+          showToast(
+            `🌤 Você deixou ${
+              message?.label
+              ||
+              "a caverna"
+            }.`,
+          );
+        }
+
+
+        updateRegionHud();
+      },
+    );
+
+
+    room.onMessage(
       "toast",
 
       (
@@ -9540,6 +10376,19 @@ addEventListener(
       !event.repeat
     ) {
 
+      if (
+        currentCave
+      ) {
+
+        showToast(
+          "🕳 O mapa regional não funciona no subterrâneo.",
+        );
+
+
+        return;
+      }
+
+
       renderRegionMap();
 
 
@@ -9846,6 +10695,119 @@ function updateInteraction() {
     ||
     activeModal
   ) return;
+
+
+  /*
+   * ETAPA 15 — CAVERNAS
+   */
+
+  if (
+    currentCave
+  ) {
+
+    const cave =
+      CAVES[
+        currentCave
+      ];
+
+
+    if (
+      cave
+    ) {
+
+      const exitDistance =
+        Math.hypot(
+          localPlayer.x -
+          cave.interior.exit.x,
+
+          localPlayer.z -
+          cave.interior.exit.z,
+        );
+
+
+      if (
+        exitDistance <=
+        cave.interior.exit.radius
+      ) {
+
+        interaction.textContent =
+          "[ E ] 🌤 Sair da caverna";
+
+
+        interaction.style.display =
+          "block";
+
+
+        return;
+      }
+
+
+      const chestDistance =
+        Math.hypot(
+          localPlayer.x -
+          cave.chest.x,
+
+          localPlayer.z -
+          cave.chest.z,
+        );
+
+
+      if (
+        chestDistance <=
+        cave.chest.radius
+      ) {
+
+        interaction.textContent =
+          "[ E ] 📦 Abrir baú da caverna";
+
+
+        interaction.style.display =
+          "block";
+
+
+        return;
+      }
+    }
+  }
+
+  else {
+
+    const caveEntrance =
+      nearestCaveEntrance(
+        localPlayer.x,
+        localPlayer.z,
+        3,
+      );
+
+
+    if (
+      caveEntrance
+    ) {
+
+      const locked =
+        localPlayer.level <
+        caveEntrance.cave.minLevel;
+
+
+      interaction.textContent =
+        locked
+          ? `🔒 ${
+              caveEntrance.cave.label
+            } · requer Nv.${
+              caveEntrance.cave.minLevel
+            }`
+          : `[ E ] 🕳 Entrar · ${
+              caveEntrance.cave.label
+            }`;
+
+
+      interaction.style.display =
+        "block";
+
+
+      return;
+    }
+  }
 
 
   const drop =
