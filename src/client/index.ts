@@ -69,6 +69,14 @@ import {
   nearestCaveEntrance,
 } from "../shared/caves";
 
+import {
+  buildVisualOverhaul,
+  premiumPlayerTexture,
+  premiumTexture,
+  updatePremiumPlayerSprite,
+  updateVisualOverhaul,
+} from "./visualOverhaul";
+
 
 const EQUIPMENT_LABELS = {
 
@@ -2098,7 +2106,7 @@ function shadow(
 
 
 
-function simpleTexture(
+function legacySimpleTexture(
   kind,
 ) {
 
@@ -2465,7 +2473,7 @@ function stationTexture(
 }
 
 
-function playerTexture(
+function legacyPlayerTexture(
   id,
 ) {
 
@@ -2720,7 +2728,7 @@ function addSpriteObject(
         ? stationTexture(
             kind,
           )
-        : simpleTexture(
+        : premiumTexture(
             kind,
           ),
 
@@ -2931,8 +2939,8 @@ function buildRegionVisuals() {
             opacity:
               id ===
               "village"
-                ? .06
-                : .17,
+                ? .015
+                : .07,
 
             depthWrite:
               false,
@@ -3310,7 +3318,7 @@ function buildRegionalNpcVisuals() {
 
     group.add(
       makeSprite(
-        simpleTexture(
+        premiumTexture(
           npc.visualKind,
         ),
 
@@ -3407,7 +3415,7 @@ function buildRegionalLifeVisuals() {
 
   caravanGroup.add(
     makeSprite(
-      simpleTexture(
+      premiumTexture(
         CARAVAN.visualKind,
       ),
 
@@ -4692,6 +4700,11 @@ buildCaveVisuals();
 
 addAdvancedFishingSpots();
 
+buildVisualOverhaul(
+  scene,
+  renderer,
+);
+
 
 class PlayerVisual {
 
@@ -4722,7 +4735,7 @@ class PlayerVisual {
 
     this.sprite =
       makeSprite(
-        playerTexture(
+        premiumPlayerTexture(
           id,
         ),
         2.1,
@@ -4733,6 +4746,18 @@ class PlayerVisual {
     this.group.add(
       this.sprite,
     );
+
+
+    this.baseSpriteY =
+      this.sprite.position.y;
+
+
+    this.moving =
+      false;
+
+
+    this.direction =
+      0;
 
 
     if (
@@ -4790,14 +4815,49 @@ class PlayerVisual {
       0,
       player.z,
     );
+
+
+    this.moving =
+      Boolean(
+        player.moving,
+      );
+
+
+    this.direction =
+      Number(
+        player.direction,
+      )
+      ||
+      0;
   }
 
 
-  update() {
+  update(
+    elapsed =
+      0,
+  ) {
 
     this.group.position.lerp(
       this.target,
       .25,
+    );
+
+
+    updatePremiumPlayerSprite(
+      this.sprite,
+
+      {
+        moving:
+          this.moving,
+
+        direction:
+          this.direction,
+
+        elapsed,
+
+        baseY:
+          this.baseSpriteY,
+      },
     );
   }
 }
@@ -4854,7 +4914,7 @@ class ResourceVisual {
 
     this.sprite =
       makeSprite(
-        simpleTexture(
+        premiumTexture(
           node.kind,
         ),
         size[
@@ -4942,7 +5002,7 @@ class EnemyVisual {
 
     this.sprite =
       makeSprite(
-        simpleTexture(
+        premiumTexture(
           enemy.kind,
         ),
         enemy.kind ===
@@ -11764,7 +11824,9 @@ function animate() {
     of players.values()
   ) {
 
-    visual.update();
+    visual.update(
+      elapsed,
+    );
   }
 
 
@@ -11832,6 +11894,22 @@ function animate() {
   updateInteraction();
 
   updateLabels();
+
+
+  updateVisualOverhaul(
+    {
+      scene,
+
+      renderer,
+
+      elapsed,
+
+      nowMs:
+        Date.now(),
+
+      currentCave,
+    },
+  );
 
 
   renderer.render(
