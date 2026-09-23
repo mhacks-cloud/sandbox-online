@@ -1506,6 +1506,16 @@ function addHouse(
     new THREE.Group();
 
 
+  /*
+   * ETAPA 19:
+   * permite esconder apenas a casa procedural
+   * quando a versão real do Tiny Swords carregar.
+   */
+
+  group.userData.stage16House =
+    true;
+
+
   const foundation =
     box(
       4,

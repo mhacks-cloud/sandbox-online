@@ -86,6 +86,18 @@ import {
   updateVisualEffects,
 } from "./visualEffects";
 
+import {
+  bindRealCharacterSprite,
+  bindRealResourceSprite,
+  buildTinySwordsVillage,
+  enemyAppearance,
+  npcAppearance,
+  playerAppearance,
+  playRealCharacterAction,
+  setRealCharacterMoving,
+  updateRealAssets,
+} from "./realAssets";
+
 
 const EQUIPMENT_LABELS = {
 
@@ -2731,7 +2743,7 @@ function addSpriteObject(
   );
 
 
-  group.add(
+  const sprite =
     makeSprite(
       station
         ? stationTexture(
@@ -2743,8 +2755,25 @@ function addSpriteObject(
 
       width,
       height,
-    ),
+    );
+
+
+  group.add(
+    sprite,
   );
+
+
+  if (
+    !station
+  ) {
+
+    bindRealCharacterSprite(
+      sprite,
+      npcAppearance(
+        kind,
+      ),
+    );
+  }
 
 
   group.position.set(
@@ -3325,7 +3354,7 @@ function buildRegionalNpcVisuals() {
     );
 
 
-    group.add(
+    const sprite =
       makeSprite(
         premiumTexture(
           npc.visualKind,
@@ -3334,6 +3363,18 @@ function buildRegionalNpcVisuals() {
         2.2,
 
         3,
+      );
+
+
+    group.add(
+      sprite,
+    );
+
+
+    bindRealCharacterSprite(
+      sprite,
+      npcAppearance(
+        id,
       ),
     );
 
@@ -3422,7 +3463,7 @@ function buildRegionalLifeVisuals() {
   );
 
 
-  caravanGroup.add(
+  const caravanSprite =
     makeSprite(
       premiumTexture(
         CARAVAN.visualKind,
@@ -3431,6 +3472,18 @@ function buildRegionalLifeVisuals() {
       2.2,
 
       3,
+    );
+
+
+  caravanGroup.add(
+    caravanSprite,
+  );
+
+
+  bindRealCharacterSprite(
+    caravanSprite,
+    npcAppearance(
+      "miro",
     ),
   );
 
@@ -4718,6 +4771,10 @@ initVisualEffects(
   scene,
 );
 
+buildTinySwordsVillage(
+  scene,
+);
+
 
 class PlayerVisual {
 
@@ -4758,6 +4815,16 @@ class PlayerVisual {
 
     this.group.add(
       this.sprite,
+    );
+
+
+    bindRealCharacterSprite(
+      this.sprite,
+      playerAppearance(
+        player.name
+        ||
+        id,
+      ),
     );
 
 
@@ -4882,6 +4949,12 @@ class PlayerVisual {
     );
 
 
+    setRealCharacterMoving(
+      this.sprite,
+      this.moving,
+    );
+
+
     emitFootstep(
       this.visualId,
       this.group.position,
@@ -4916,6 +4989,13 @@ class PlayerVisual {
       performance.now()
       +
       150;
+
+
+    playRealCharacterAction(
+      this.sprite,
+      "hurt",
+      300,
+    );
   }
 }
 
@@ -4985,6 +5065,12 @@ class ResourceVisual {
 
     this.group.add(
       this.sprite,
+    );
+
+
+    bindRealResourceSprite(
+      this.sprite,
+      node.kind,
     );
 
 
@@ -5256,6 +5342,14 @@ class EnemyVisual {
     );
 
 
+    bindRealCharacterSprite(
+      this.sprite,
+      enemyAppearance(
+        enemy.kind,
+      ),
+    );
+
+
     this.group.position.copy(
       this.target,
     );
@@ -5396,6 +5490,14 @@ class EnemyVisual {
     }
 
 
+    setRealCharacterMoving(
+      this.sprite,
+      Boolean(
+        this.enemy?.moving,
+      ),
+    );
+
+
     if (
       performance.now()
       <
@@ -5422,6 +5524,13 @@ class EnemyVisual {
       performance.now()
       +
       140;
+
+
+    playRealCharacterAction(
+      this.sprite,
+      "hurt",
+      300,
+    );
 
 
     spawnImpact(
@@ -10715,6 +10824,13 @@ addEventListener(
         localVisual
       ) {
 
+        playRealCharacterAction(
+          localVisual.sprite,
+          "attack",
+          420,
+        );
+
+
         playAttackEffect(
           localVisual.group.position,
           localVisual.direction,
@@ -12459,6 +12575,11 @@ function animate() {
       camera,
       elapsed,
     },
+  );
+
+
+  updateRealAssets(
+    elapsed,
   );
 
 
