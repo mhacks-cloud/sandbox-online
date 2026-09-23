@@ -86,6 +86,26 @@ import {
   updateVisualEffects,
 } from "./visualEffects";
 
+import {
+  configureTopDownCamera,
+  setupTopDownSprite,
+  updateTopDownCamera,
+  updateTopDownSorting,
+} from "./topDown2D";
+
+import {
+  bindRealCharacterSprite,
+  bindRealResourceSprite,
+  buildTinySwordsVillage2D,
+  buildTopDownGround,
+  enemyAppearance,
+  npcAppearance,
+  playerAppearance,
+  playRealCharacterAction,
+  setRealCharacterMoving,
+  updateRealAssets2D,
+} from "./realAssets2D";
+
 
 const EQUIPMENT_LABELS = {
 
@@ -2070,9 +2090,9 @@ function makeSprite(
   );
 
 
-  result.position.y =
-    height /
-    2;
+  setupTopDownSprite(
+    result,
+  );
 
 
   return result;
@@ -2647,18 +2667,13 @@ addEventListener(
 );
 
 
-camera.position.set(
-  10,
-  12,
-  10,
+configureTopDownCamera(
+  camera,
 );
 
 
-camera.lookAt(
-  0,
-  0,
-  0,
-);
+renderer.domElement.style.imageRendering =
+  "pixelated";
 
 
 const staticLabels = [];
@@ -2731,8 +2746,15 @@ function addSpriteObject(
   );
 
 
-  group.add(
+  const displayHeight =
+    station
+      ? height
+      : width;
+
+
+  const sprite =
     makeSprite(
+
       station
         ? stationTexture(
             kind,
@@ -2742,9 +2764,26 @@ function addSpriteObject(
           ),
 
       width,
-      height,
-    ),
+      displayHeight,
+    );
+
+
+  group.add(
+    sprite,
   );
+
+
+  if (
+    !station
+  ) {
+
+    bindRealCharacterSprite(
+      sprite,
+      npcAppearance(
+        kind,
+      ),
+    );
+  }
 
 
   group.position.set(
@@ -2767,7 +2806,8 @@ function addSpriteObject(
       label,
       x,
       z,
-      height +
+      displayHeight
+      +
       .35,
     );
   }
@@ -3325,7 +3365,7 @@ function buildRegionalNpcVisuals() {
     );
 
 
-    group.add(
+    const sprite =
       makeSprite(
         premiumTexture(
           npc.visualKind,
@@ -3333,7 +3373,19 @@ function buildRegionalNpcVisuals() {
 
         2.2,
 
-        3,
+        2.2,
+      );
+
+
+    group.add(
+      sprite,
+    );
+
+
+    bindRealCharacterSprite(
+      sprite,
+      npcAppearance(
+        id,
       ),
     );
 
@@ -3383,6 +3435,8 @@ function buildRegionalNpcVisuals() {
 
         group,
 
+        sprite,
+
         label,
       },
     );
@@ -3422,7 +3476,7 @@ function buildRegionalLifeVisuals() {
   );
 
 
-  caravanGroup.add(
+  const caravanSprite =
     makeSprite(
       premiumTexture(
         CARAVAN.visualKind,
@@ -3430,7 +3484,19 @@ function buildRegionalLifeVisuals() {
 
       2.2,
 
-      3,
+      2.2,
+    );
+
+
+  caravanGroup.add(
+    caravanSprite,
+  );
+
+
+  bindRealCharacterSprite(
+    caravanSprite,
+    npcAppearance(
+      "miro",
     ),
   );
 
@@ -3524,6 +3590,9 @@ function buildRegionalLifeVisuals() {
 
     group:
       caravanGroup,
+
+    sprite:
+      caravanSprite,
 
     label:
       caravanLabel,
@@ -4719,6 +4788,16 @@ initVisualEffects(
 );
 
 
+buildTopDownGround(
+  scene,
+);
+
+
+buildTinySwordsVillage2D(
+  scene,
+);
+
+
 class PlayerVisual {
 
   constructor(
@@ -4752,12 +4831,23 @@ class PlayerVisual {
           id,
         ),
         2.1,
-        3.2,
+        2.1,
       );
 
 
     this.group.add(
       this.sprite,
+    );
+
+
+    bindRealCharacterSprite(
+      this.sprite,
+
+      playerAppearance(
+        player.name
+        ||
+        id,
+      ),
     );
 
 
@@ -4882,6 +4972,12 @@ class PlayerVisual {
     );
 
 
+    setRealCharacterMoving(
+      this.sprite,
+      this.moving,
+    );
+
+
     emitFootstep(
       this.visualId,
       this.group.position,
@@ -4916,6 +5012,13 @@ class PlayerVisual {
       performance.now()
       +
       150;
+
+
+    playRealCharacterAction(
+      this.sprite,
+      "hurt",
+      300,
+    );
   }
 }
 
@@ -4949,8 +5052,8 @@ class ResourceVisual {
 
             node.kind ===
             "hard_tree"
-              ? 5.2
-              : 4.8,
+              ? 3.8
+              : 3.4,
           ]
         : [
             2,
@@ -4985,6 +5088,12 @@ class ResourceVisual {
 
     this.group.add(
       this.sprite,
+    );
+
+
+    bindRealResourceSprite(
+      this.sprite,
+      node.kind,
     );
 
 
@@ -5235,24 +5344,34 @@ class EnemyVisual {
     );
 
 
+    const enemySize =
+      enemy.kind ===
+      "goblin"
+        ? 2
+        : 2.1;
+
+
     this.sprite =
       makeSprite(
         premiumTexture(
           enemy.kind,
         ),
-        enemy.kind ===
-        "goblin"
-          ? 2
-          : 2.1,
-        enemy.kind ===
-        "goblin"
-          ? 2.7
-          : 1.8,
+        enemySize,
+        enemySize,
       );
 
 
     this.group.add(
       this.sprite,
+    );
+
+
+    bindRealCharacterSprite(
+      this.sprite,
+
+      enemyAppearance(
+        enemy.kind,
+      ),
     );
 
 
@@ -5396,6 +5515,14 @@ class EnemyVisual {
     }
 
 
+    setRealCharacterMoving(
+      this.sprite,
+      Boolean(
+        this.enemy?.moving,
+      ),
+    );
+
+
     if (
       performance.now()
       <
@@ -5422,6 +5549,13 @@ class EnemyVisual {
       performance.now()
       +
       140;
+
+
+    playRealCharacterAction(
+      this.sprite,
+      "hurt",
+      300,
+    );
 
 
     spawnImpact(
@@ -10715,6 +10849,13 @@ addEventListener(
         localVisual
       ) {
 
+        playRealCharacterAction(
+          localVisual.sprite,
+          "attack",
+          420,
+        );
+
+
         playAttackEffect(
           localVisual.group.position,
           localVisual.direction,
@@ -11131,41 +11272,22 @@ function sendMovement() {
     );
 
 
-  camera.getWorldDirection(
-    forward,
+  /*
+   * ETAPA 19 — TOP-DOWN
+   *
+   * D = +X
+   * A = -X
+   * S = +Z
+   * W = -Z
+   */
+
+  movement.set(
+    sx /
+    length,
+    0,
+    sy /
+    length,
   );
-
-
-  forward.y =
-    0;
-
-
-  forward.normalize();
-
-
-  right.crossVectors(
-    forward,
-    worldUp,
-  )
-    .normalize();
-
-
-  movement
-    .set(
-      0,
-      0,
-      0,
-    )
-    .addScaledVector(
-      right,
-      sx /
-      length,
-    )
-    .addScaledVector(
-      forward,
-      -sy /
-      length,
-    );
 
 
   room.send(
@@ -11958,12 +12080,38 @@ function projectLabel(
   position,
 ) {
 
+  /*
+   * Em câmera superior, Y não representa altura visual.
+   * Reaproveitamos o Y recebido como distância em pixels
+   * acima do objeto.
+   */
+
+  const lift =
+    Math.max(
+      8,
+
+      Number(
+        position.y
+        ||
+        0,
+      )
+      *
+      13,
+    );
+
+
   projection.copy(
     position,
-  )
-    .project(
-      camera,
-    );
+  );
+
+
+  projection.y =
+    0;
+
+
+  projection.project(
+    camera,
+  );
 
 
   element.style.left =
@@ -11987,6 +12135,8 @@ function projectLabel(
       )
       *
       innerHeight
+      -
+      lift
     }px`;
 }
 
@@ -12024,6 +12174,26 @@ function updateRegionalNpcVisuals() {
     }
 
 
+    const npcMoving =
+      Math.hypot(
+        life.x
+        -
+        visual.group.position.x,
+
+        life.z
+        -
+        visual.group.position.z,
+      )
+      >
+      .002;
+
+
+    setRealCharacterMoving(
+      visual.sprite,
+      npcMoving,
+    );
+
+
     visual.group.position.set(
       life.x,
       0,
@@ -12052,6 +12222,26 @@ function updateRegionalNpcVisuals() {
       caravanPositionAt(
         now,
       );
+
+
+    const caravanMoving =
+      Math.hypot(
+        caravan.x
+        -
+        caravanVisual.group.position.x,
+
+        caravan.z
+        -
+        caravanVisual.group.position.z,
+      )
+      >
+      .002;
+
+
+    setRealCharacterMoving(
+      caravanVisual.sprite,
+      caravanMoving,
+    );
 
 
     caravanVisual
@@ -12408,25 +12598,10 @@ function animate() {
     );
 
 
-    desiredCamera.set(
-      cameraFocus.x +
-      10,
-      12,
-      cameraFocus.z +
-      10,
-    );
-
-
-    camera.position.lerp(
+    updateTopDownCamera(
+      camera,
+      cameraFocus,
       desiredCamera,
-      .1,
-    );
-
-
-    camera.lookAt(
-      cameraFocus.x,
-      0,
-      cameraFocus.z,
     );
   }
 
@@ -12459,6 +12634,16 @@ function animate() {
       camera,
       elapsed,
     },
+  );
+
+
+  updateRealAssets2D(
+    elapsed,
+  );
+
+
+  updateTopDownSorting(
+    scene,
   );
 
 

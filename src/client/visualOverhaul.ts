@@ -1506,6 +1506,10 @@ function addHouse(
     new THREE.Group();
 
 
+  group.userData.stage16House =
+    true;
+
+
   const foundation =
     box(
       4,
@@ -2678,6 +2682,10 @@ function buildVillage(
   );
 
 
+  base.userData.stage16VillageBase =
+    true;
+
+
   root.add(
     base,
   );
@@ -3383,7 +3391,7 @@ export function updateVisualOverhaul(
 
 
     scene.fog.density =
-      .025;
+      .007;
 
 
     renderer.domElement.style.filter =
@@ -3444,10 +3452,10 @@ export function updateVisualOverhaul(
 
 
     scene.fog.density =
-      .011
+      .0015
       +
       night *
-      .004;
+      .0015;
 
 
     renderer.domElement.style.filter =

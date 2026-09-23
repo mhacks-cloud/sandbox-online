@@ -495,8 +495,17 @@ export function spawnFloatingText(
   );
 
 
-  sprite.position.y +=
-    2.4;
+  /*
+   * Em câmera top-down, Y é profundidade.
+   * Para subir visualmente na tela usamos -Z.
+   */
+
+  sprite.position.y =
+    .35;
+
+
+  sprite.position.z -=
+    .7;
 
 
   sprite.scale.set(
@@ -999,10 +1008,14 @@ export function updateVisualEffects(
     ) {
 
       effect.object.position.y =
-        effect.start.y
-        +
+        .35;
+
+
+      effect.object.position.z =
+        effect.start.z
+        -
         t *
-        1.25;
+        1.1;
 
 
       effect.material.opacity =
